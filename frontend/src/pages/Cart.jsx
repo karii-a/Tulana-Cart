@@ -45,17 +45,16 @@ function Cart() {
 
   async function handleCheckout() {
     if (cart.length === 0) return
-
-    // Create order in Supabase
+  
+    // Create order
     const { data: order, error } = await supabase
       .from('orders')
       .insert([{ user_id: user.id, total_amount: total, status: 'pending' }])
       .select()
       .single()
-
+  
     if (error) return
-
-    // Insert order items
+  
     const items = cart.map(c => ({
       order_id: order.id,
       product_id: c.product_id,
@@ -64,32 +63,42 @@ function Cart() {
       quantity: c.quantity
     }))
     await supabase.from('order_items').insert(items)
-
-    // eSewa payment
-    const params = {
-      amt: total,
-      psc: 0,
-      pdc: 0,
-      txAmt: 0,
-      tAmt: total,
-      pid: `order-${order.id}`,
-      scd: 'EPAYTEST',
-      su: `http://localhost:5173/payment-success?order_id=${order.id}`,
-      fu: `http://localhost:5173/payment-failed?order_id=${order.id}`
-    }
-
+  
+    // Get signed params from backend
+    const response = await fetch('http://localhost:3000/api/esewa/initiate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ amount: total, order_id: order.id })
+    })
+    const params = await response.json()
+  
+    // Submit form to eSewa
     const form = document.createElement('form')
     form.method = 'POST'
-    form.action = 'https://uat.esewa.com.np/epay/main'
-
-    Object.entries(params).forEach(([key, val]) => {
+    form.action = params.payment_url
+  
+    const fields = {
+      amount: params.total_amount,
+      tax_amount: 0,
+      total_amount: params.total_amount,
+      transaction_uuid: params.transaction_uuid,
+      product_code: params.product_code,
+      product_service_charge: 0,
+      product_delivery_charge: 0,
+      success_url: params.success_url,
+      failure_url: params.failure_url,
+      signed_field_names: 'total_amount,transaction_uuid,product_code',
+      signature: params.signature
+    }
+  
+    Object.entries(fields).forEach(([key, val]) => {
       const input = document.createElement('input')
       input.type = 'hidden'
       input.name = key
       input.value = val
       form.appendChild(input)
     })
-
+  
     document.body.appendChild(form)
     form.submit()
   }
