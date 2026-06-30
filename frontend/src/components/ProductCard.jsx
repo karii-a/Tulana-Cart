@@ -10,9 +10,11 @@ function ProductCard({ product }) {
   const prices = product.product_prices ?? []
   const nums = prices.map((p) => p.price)
   const minPrice = nums.length > 0 ? Math.min(...nums) : null
+  const bestPrice = prices.find((p) => p.price === minPrice)
 
   const [wishlisted, setWishlisted] = useState(false)
   const [adding, setAdding] = useState(false)
+  const [cartMsg, setCartMsg] = useState('')
 
   async function toggleWishlist() {
     if (!user) {
@@ -31,17 +33,45 @@ function ProductCard({ product }) {
 
       setWishlisted(false)
     } else {
-      await supabase.from('wishlist').insert([
-        {
-          user_id: user.id,
-          product_id: product.id,
-        },
-      ])
+      await supabase
+        .from('wishlist')
+        .insert([
+          {
+            user_id: user.id,
+            product_id: product.id,
+          },
+        ])
 
       setWishlisted(true)
     }
 
     setAdding(false)
+  }
+
+  async function addToCart() {
+    if (!user) {
+      window.location.href = '/login'
+      return
+    }
+
+    if (!bestPrice) return
+
+    const { error } = await supabase
+      .from('cart')
+      .insert([
+        {
+          user_id: user.id,
+          product_id: product.id,
+          store_id: bestPrice.stores?.id,
+          price: bestPrice.price,
+          quantity: 1,
+        },
+      ])
+
+    if (!error) {
+      setCartMsg('Added!')
+      setTimeout(() => setCartMsg(''), 2000)
+    }
   }
 
   return (
@@ -54,7 +84,6 @@ function ProductCard({ product }) {
             className={`wishlist-btn ${wishlisted ? 'wishlisted' : ''}`}
             onClick={toggleWishlist}
             disabled={adding}
-            title={wishlisted ? 'Remove from wishlist' : 'Add to wishlist'}
           >
             {wishlisted ? '❤️' : '🤍'}
           </button>
@@ -92,6 +121,17 @@ function ProductCard({ product }) {
             </a>
           ))}
         </div>
+
+        <button
+          className="cart-btn"
+          onClick={addToCart}
+        >
+          {cartMsg
+            ? cartMsg
+            : lang === 'en'
+            ? '🛒 Add to Cart'
+            : '🛒 कार्टमा थप्नुहोस्'}
+        </button>
       </div>
     </div>
   )

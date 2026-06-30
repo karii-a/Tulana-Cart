@@ -21,6 +21,7 @@ function Navbar() {
       </div>
       <div className="navbar__links">
         <Link to="/">{lang === 'en' ? 'Home' : 'गृहपृष्ठ'}</Link>
+        <Link to="/cart">🛒 {lang === 'en' ? 'Cart' : 'कार्ट'}</Link>
         <Link to="/wishlist">{lang === 'en' ? 'Wishlist' : 'इच्छासूची'}</Link>
         <Link to="/compare">{lang === 'en' ? 'Compare' : 'तुलना'}</Link>
         {role === 'admin' && (
