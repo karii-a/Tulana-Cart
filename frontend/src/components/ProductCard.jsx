@@ -33,14 +33,12 @@ function ProductCard({ product }) {
 
       setWishlisted(false)
     } else {
-      await supabase
-        .from('wishlist')
-        .insert([
-          {
-            user_id: user.id,
-            product_id: product.id,
-          },
-        ])
+      await supabase.from('wishlist').insert([
+        {
+          user_id: user.id,
+          product_id: product.id,
+        },
+      ])
 
       setWishlisted(true)
     }
@@ -56,17 +54,15 @@ function ProductCard({ product }) {
 
     if (!bestPrice) return
 
-    const { error } = await supabase
-      .from('cart')
-      .insert([
-        {
-          user_id: user.id,
-          product_id: product.id,
-          store_id: bestPrice.stores?.id,
-          price: bestPrice.price,
-          quantity: 1,
-        },
-      ])
+    const { error } = await supabase.from('cart').insert([
+      {
+        user_id: user.id,
+        product_id: product.id,
+        store_id: bestPrice.stores?.id,
+        price: bestPrice.price,
+        quantity: 1,
+      },
+    ])
 
     if (!error) {
       setCartMsg('Added!')
@@ -76,22 +72,30 @@ function ProductCard({ product }) {
 
   return (
     <div className="product-card">
+      <div className="product-card__image">
+        {product.image_url ? (
+          <img src={product.image_url} alt={product.name} />
+        ) : (
+          <div className="product-card__no-image">🛒</div>
+        )}
+
+        <button
+          className={`wishlist-btn ${wishlisted ? 'wishlisted' : ''}`}
+          onClick={toggleWishlist}
+          disabled={adding}
+        >
+          {wishlisted ? '❤️' : '🤍'}
+        </button>
+      </div>
+
       <div className="product-card__body">
-        <div className="product-card__header">
-          <h3>{product.name}</h3>
+        <h3>
+          {lang === 'en'
+            ? product.name
+            : product.name_np || product.name}
+        </h3>
 
-          <button
-            className={`wishlist-btn ${wishlisted ? 'wishlisted' : ''}`}
-            onClick={toggleWishlist}
-            disabled={adding}
-          >
-            {wishlisted ? '❤️' : '🤍'}
-          </button>
-        </div>
-
-        <p className="product-card__brand">
-          {product.brand}
-        </p>
+        <p className="product-card__brand">{product.brand}</p>
 
         <p className="product-card__category">
           {lang === 'en'
@@ -122,10 +126,7 @@ function ProductCard({ product }) {
           ))}
         </div>
 
-        <button
-          className="cart-btn"
-          onClick={addToCart}
-        >
+        <button className="cart-btn" onClick={addToCart}>
           {cartMsg
             ? cartMsg
             : lang === 'en'
