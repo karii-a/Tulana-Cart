@@ -28,15 +28,17 @@ function Navbar() {
           <Link to="/admin">{lang === 'en' ? 'Admin' : 'एडमिन'}</Link>
         )}
         {user ? (
-          <>
-            <span className="navbar__user">{user.email}</span>
-            <button className="navbar__logout" onClick={handleLogout}>
-              {lang === 'en' ? 'Logout' : 'लगआउट'}
-            </button>
-          </>
-        ) : (
-          <Link to="/login">{lang === 'en' ? 'Login' : 'लगइन'}</Link>
-        )}
+  <>
+    <Link to="/profile" className="navbar__user">
+      {user.user_metadata?.full_name || user.email?.split('@')[0]}
+    </Link>
+    <button className="navbar__logout" onClick={handleLogout}>
+      {lang === 'en' ? 'Logout' : 'लगआउट'}
+    </button>
+  </>
+) : (
+  <Link to="/login">{lang === 'en' ? 'Login' : 'लगइन'}</Link>
+)}
       </div>
       <LanguageToggle />
     </nav>
