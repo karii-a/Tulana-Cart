@@ -1235,6 +1235,226 @@ a {
   }
 }
 
+// Back button
+.back-btn {
+  background: none;
+  border: none;
+  color: $primary;
+  font-size: 0.95rem;
+  cursor: pointer;
+  padding: 0;
+  margin-bottom: 1.5rem;
+  font-weight: 500;
+  &:hover { text-decoration: underline; }
+}
+
+// Product detail page
+.product-detail {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2.5rem;
+  background: $white;
+  border-radius: $radius;
+  box-shadow: $shadow;
+  overflow: hidden;
+
+  @media (max-width: 768px) {
+    grid-template-columns: 1fr;
+  }
+
+  &__image {
+    height: 400px;
+    background: #f5f5f5;
+
+    img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    @media (max-width: 768px) { height: 250px; }
+  }
+
+  &__no-image {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 5rem;
+    color: #bdbdbd;
+  }
+
+  &__info {
+    padding: 2rem 2rem 2rem 0;
+
+    @media (max-width: 768px) { padding: 1.5rem; }
+  }
+
+  &__category {
+    color: $primary;
+    font-size: 0.85rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    margin-bottom: 0.5rem;
+  }
+
+  h1 {
+    font-size: 1.6rem;
+    margin-bottom: 0.5rem;
+    color: $text;
+  }
+
+  &__brand {
+    color: $text-light;
+    font-size: 0.9rem;
+    margin-bottom: 1rem;
+  }
+
+  &__price-range {
+    margin-bottom: 1.5rem;
+  }
+
+  &__stores {
+    margin-bottom: 1.5rem;
+
+    h3 {
+      font-size: 0.95rem;
+      margin-bottom: 0.8rem;
+      color: $text;
+    }
+  }
+
+  &__actions {
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+    margin-bottom: 1rem;
+    flex-wrap: wrap;
+  }
+
+  &__selected {
+    font-size: 0.9rem;
+    color: $text-light;
+    padding: 0.5rem;
+    background: #f5f5f5;
+    border-radius: 6px;
+  }
+}
+
+.price-main {
+  font-size: 1.8rem;
+  font-weight: 700;
+  color: $secondary;
+}
+
+// Store options on detail page
+.store-option {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.8rem 1rem;
+  border: 1.5px solid #e0e0e0;
+  border-radius: $radius;
+  margin-bottom: 0.5rem;
+  cursor: pointer;
+  transition: all 0.2s;
+
+  &:hover { border-color: $primary; background: #f9fbe7; }
+
+  &--selected {
+    border-color: $primary;
+    background: #e8f5e9;
+  }
+
+  &--best { border-color: $primary-light; }
+
+  &__left {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+  }
+
+  &__unit { color: $text-light; font-size: 0.85rem; }
+
+  &__right {
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+  }
+
+  &__price {
+    font-weight: 700;
+    color: $secondary;
+    font-size: 1.1rem;
+  }
+
+  &__link {
+    background: $primary;
+    color: $white;
+    padding: 0.3rem 0.7rem;
+    border-radius: 6px;
+    font-size: 0.8rem;
+    &:hover { background: $primary-light; }
+  }
+}
+
+// Quantity control
+.quantity-control {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  border: 1.5px solid #e0e0e0;
+  border-radius: $radius;
+  padding: 0.2rem;
+
+  button {
+    width: 32px;
+    height: 32px;
+    border: none;
+    background: none;
+    font-size: 1.2rem;
+    cursor: pointer;
+    color: $primary;
+    font-weight: 700;
+    &:hover { background: #f5f5f5; border-radius: 4px; }
+  }
+
+  span { min-width: 24px; text-align: center; font-weight: 600; }
+}
+
+.detail-cart-btn {
+  flex: 1;
+  padding: 0.75rem 1rem;
+  background: $secondary;
+  color: $white;
+  border: none;
+  border-radius: $radius;
+  font-weight: 700;
+  font-size: 0.95rem;
+  cursor: pointer;
+  &:hover { background: #e65100; }
+}
+
+.detail-wishlist-btn {
+  width: 46px;
+  height: 46px;
+  border: 1.5px solid #e0e0e0;
+  background: $white;
+  border-radius: $radius;
+  font-size: 1.3rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  &.wishlisted { border-color: #e91e63; background: #fce4ec; }
+  &:hover { border-color: $primary; }
+}
+
+// Make product card cursor pointer
+.product-card { cursor: pointer; }
+
 // UI Polish
 
 // Smooth transitions globally
