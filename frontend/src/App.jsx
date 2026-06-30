@@ -12,6 +12,8 @@ import Cart from './pages/Cart'
 import PaymentSuccess from './pages/PaymentSuccess'
 import PaymentFailed from './pages/PaymentFailed'
 import Profile from './pages/Profile'
+import ProductDetail from './pages/ProductDetail'
+
 
 function App() {
   const { role, loading } = useAuth()
@@ -28,6 +30,7 @@ function App() {
         <Route path="/login" element={<Login />} />
         <Route path="/cart" element={<Cart />} />
         <Route path="/profile" element={<Profile />} />
+        <Route path="/product/:id" element={<ProductDetail />} />
         
 <Route path="/payment-success" element={<PaymentSuccess />} />
 <Route path="/payment-failed" element={<PaymentFailed />} />
