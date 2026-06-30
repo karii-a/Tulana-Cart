@@ -21,26 +21,30 @@ function Navbar() {
       </div>
       <div className="navbar__links">
         <Link to="/">{lang === 'en' ? 'Home' : 'गृहपृष्ठ'}</Link>
-        <Link to="/cart">🛒 {lang === 'en' ? 'Cart' : 'कार्ट'}</Link>
-        <Link to="/wishlist">{lang === 'en' ? 'Wishlist' : 'इच्छासूची'}</Link>
         <Link to="/compare">{lang === 'en' ? 'Compare' : 'तुलना'}</Link>
+        <Link to="/cart">{lang === 'en' ? '🛒 Cart' : '🛒 कार्ट'}</Link>
+        <Link to="/wishlist">{lang === 'en' ? '♡ Wishlist' : '♡ इच्छासूची'}</Link>
         {role === 'admin' && (
           <Link to="/admin">{lang === 'en' ? 'Admin' : 'एडमिन'}</Link>
         )}
-        {user ? (
-  <>
-    <Link to="/profile" className="navbar__user">
-      {user.user_metadata?.full_name || user.email?.split('@')[0]}
-    </Link>
-    <button className="navbar__logout" onClick={handleLogout}>
-      {lang === 'en' ? 'Logout' : 'लगआउट'}
-    </button>
-  </>
-) : (
-  <Link to="/login">{lang === 'en' ? 'Login' : 'लगइन'}</Link>
-)}
       </div>
-      <LanguageToggle />
+      <div className="navbar__right">
+        {user ? (
+          <>
+            <Link to="/profile" className="navbar__user">
+              {user.user_metadata?.full_name?.split(' ')[0] || user.email?.split('@')[0]}
+            </Link>
+            <button className="navbar__logout" onClick={handleLogout}>
+              {lang === 'en' ? 'Logout' : 'लगआउट'}
+            </button>
+          </>
+        ) : (
+          <Link to="/login" className="navbar__login-btn">
+            {lang === 'en' ? 'Login' : 'लगइन'}
+          </Link>
+        )}
+        <LanguageToggle />
+      </div>
     </nav>
   )
 }

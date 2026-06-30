@@ -5,6 +5,9 @@ const crypto = require('crypto')
 
 const STORES = [1, 2, 3]
 
+// CHANGE THIS TO YOUR LIVE FRONTEND URL
+const FRONTEND_URL = process.env.FRONTEND_URL || "https://YOUR-FRONTEND-URL.vercel.app"
+
 router.get('/sync-products', async (req, res) => {
   try {
     const response = await fetch('https://simple-grocery-store-api.click/products')
@@ -27,6 +30,7 @@ router.get('/sync-products', async (req, res) => {
       if (prodError) continue
 
       const basePrice = Math.floor(Math.random() * 300) + 50
+
       const priceRows = STORES.map(storeId => ({
         product_id: product.id,
         store_id: storeId,
@@ -35,36 +39,57 @@ router.get('/sync-products', async (req, res) => {
         in_stock: item.inStock ?? true
       }))
 
-      await supabase.from('product_prices').insert(priceRows)
+      await supabase
+        .from('product_prices')
+        .insert(priceRows)
+
       inserted++
     }
 
-    res.json({ message: `Synced ${inserted} products`, total: apiProducts.length })
+    res.json({
+      message: `Synced ${inserted} products`,
+      total: apiProducts.length
+    })
   } catch (err) {
+    console.error(err)
     res.status(500).json({ error: err.message })
   }
 })
 
 router.post('/esewa/initiate', async (req, res) => {
-  const { amount, order_id } = req.body
+  try {
+    const { amount, order_id } = req.body
 
-  const total_amount = amount
-  const transaction_uuid = `order-${order_id}-${Date.now()}`
-  const product_code = process.env.ESEWA_MERCHANT_ID
-  const secret = process.env.ESEWA_SECRET
+    const total_amount = amount
+    const transaction_uuid = `order-${order_id}-${Date.now()}`
+    const product_code = process.env.ESEWA_MERCHANT_ID
+    const secret = process.env.ESEWA_SECRET
 
-  const message = `total_amount=${total_amount},transaction_uuid=${transaction_uuid},product_code=${product_code}`
-  const signature = crypto.createHmac('sha256', secret).update(message).digest('base64')
+    const message = `total_amount=${total_amount},transaction_uuid=${transaction_uuid},product_code=${product_code}`
 
-  res.json({
-    total_amount,
-    transaction_uuid,
-    product_code,
-    signature,
-    success_url: `http://localhost:5173/payment-success?order_id=${order_id}`,
-    failure_url: `http://localhost:5173/payment-failed?order_id=${order_id}`,
-    payment_url: 'https://rc-epay.esewa.com.np/api/epay/main/v2/form'
-  })
+    const signature = crypto
+      .createHmac('sha256', secret)
+      .update(message)
+      .digest('base64')
+
+    res.json({
+      total_amount,
+      transaction_uuid,
+      product_code,
+      signature,
+
+      success_url: `${FRONTEND_URL}/payment-success?order_id=${order_id}`,
+      failure_url: `${FRONTEND_URL}/payment-failed?order_id=${order_id}`,
+
+      payment_url: 'https://rc-epay.esewa.com.np/api/epay/main/v2/form'
+    })
+
+  } catch (err) {
+    console.error(err)
+    res.status(500).json({
+      error: err.message
+    })
+  }
 })
 
 module.exports = router
