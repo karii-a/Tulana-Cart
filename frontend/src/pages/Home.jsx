@@ -11,10 +11,14 @@ function Home() {
   const [loading, setLoading] = useState(true)
   const [category, setCategory] = useState('All')
   const [categories, setCategories] = useState([])
+  const [stores, setStores] = useState([])
+  const [activeStore, setActiveStore] = useState('All')
+  const [searchQuery, setSearchQuery] = useState('')
 
   useEffect(() => {
     fetchProducts()
     fetchCategories()
+    fetchStores()
   }, [])
 
   async function fetchProducts() {
@@ -24,7 +28,7 @@ function Home() {
       .select(`
         *,
         categories(name, name_np),
-        product_prices(price, unit, store_product_url, in_stock, stores(name, name_np))
+        product_prices(price, unit, store_product_url, in_stock, stores(id, name, name_np))
       `)
     if (!error) {
       setProducts(data)
@@ -38,21 +42,49 @@ function Home() {
     if (data) setCategories(data)
   }
 
+  async function fetchStores() {
+    const { data } = await supabase.from('stores').select('*')
+    if (data) setStores(data)
+  }
+
+  function applyFilters({ query = searchQuery, cat = category, store = activeStore }) {
+    let result = products
+
+    if (query) {
+      const q = query.toLowerCase().trim()
+      result = result.filter(p =>
+        p.name?.toLowerCase().includes(q) ||
+        p.name_np?.includes(query.trim()) ||
+        p.brand?.toLowerCase().includes(q)
+      )
+    }
+
+    if (cat !== 'All') {
+      result = result.filter(p => p.categories?.name === cat)
+    }
+
+    if (store !== 'All') {
+      result = result.filter(p =>
+        p.product_prices?.some(pp => pp.stores?.name === store)
+      )
+    }
+
+    setFiltered(result)
+  }
+
   function handleSearch(query) {
-    if (!query) return setFiltered(products)
-    const q = query.toLowerCase()
-    setFiltered(products.filter(p =>
-      p.name.toLowerCase().includes(q) ||
-      (p.name_np && p.name_np.includes(q))
-    ))
+    setSearchQuery(query)
+    applyFilters({ query })
   }
 
   function handleCategory(cat) {
     setCategory(cat)
-    if (cat === 'All') return setFiltered(products)
-    setFiltered(products.filter(p =>
-      p.categories?.name === cat
-    ))
+    applyFilters({ cat })
+  }
+
+  function handleStore(store) {
+    setActiveStore(store)
+    applyFilters({ store })
   }
 
   return (
@@ -63,26 +95,60 @@ function Home() {
         <SearchBar onSearch={handleSearch} />
       </div>
 
-      <div className="category-bar">
-        <button
-          className={`cat-btn ${category === 'All' ? 'active' : ''}`}
-          onClick={() => handleCategory('All')}
-        >
-          {lang === 'en' ? 'All' : 'सबै'}
-        </button>
-        {categories.map(cat => (
-          <button
-            key={cat.id}
-            className={`cat-btn ${category === cat.name ? 'active' : ''}`}
-            onClick={() => handleCategory(cat.name)}
-          >
-            {lang === 'en' ? cat.name : cat.name_np}
-          </button>
-        ))}
+      <div className="filter-section">
+        <div className="filter-row">
+          <span className="filter-label">{lang === 'en' ? 'Category:' : 'श्रेणी:'}</span>
+          <div className="category-bar">
+            <button
+              className={`cat-btn ${category === 'All' ? 'active' : ''}`}
+              onClick={() => handleCategory('All')}
+            >
+              {lang === 'en' ? 'All' : 'सबै'}
+            </button>
+            {categories.map(cat => (
+              <button
+                key={cat.id}
+                className={`cat-btn ${category === cat.name ? 'active' : ''}`}
+                onClick={() => handleCategory(cat.name)}
+              >
+                {lang === 'en' ? cat.name : cat.name_np}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="filter-row">
+          <span className="filter-label">{lang === 'en' ? 'Store:' : 'पसल:'}</span>
+          <div className="category-bar">
+            <button
+              className={`cat-btn cat-btn--store ${activeStore === 'All' ? 'active' : ''}`}
+              onClick={() => handleStore('All')}
+            >
+              {lang === 'en' ? 'All Stores' : 'सबै पसल'}
+            </button>
+            {stores.map(s => (
+              <button
+                key={s.id}
+                className={`cat-btn cat-btn--store ${activeStore === s.name ? 'active' : ''}`}
+                onClick={() => handleStore(s.name)}
+              >
+                {lang === 'en' ? s.name : s.name_np}
+              </button>
+            ))}
+          </div>
+        </div>
       </div>
 
       {loading ? (
-        <div className="loading">{lang === 'en' ? 'Loading...' : 'लोड हुँदैछ...'}</div>
+        <div className="product-grid">
+          {[1,2,3,4,5,6].map(i => (
+            <div key={i} className="product-card skeleton">
+              <div className="skeleton-line skeleton-title"></div>
+              <div className="skeleton-line skeleton-text"></div>
+              <div className="skeleton-line skeleton-price"></div>
+            </div>
+          ))}
+        </div>
       ) : filtered.length === 0 ? (
         <div className="no-results">{lang === 'en' ? 'No products found.' : 'कुनै उत्पादन फेला परेन।'}</div>
       ) : (

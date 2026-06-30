@@ -1,12 +1,19 @@
-import { Routes, Route } from 'react-router-dom'
+import { Routes, Route, Navigate } from 'react-router-dom'
 import Navbar from './components/Navbar'
+import Footer from './components/Footer'
 import Home from './pages/Home'
 import Compare from './pages/Compare'
 import Wishlist from './pages/Wishlist'
 import Login from './pages/Login'
 import Admin from './pages/Admin'
+import NotFound from './pages/NotFound'
+import { useAuth } from './context/AuthContext'
 
 function App() {
+  const { role, loading } = useAuth()
+
+  if (loading) return <div className="loading">Loading...</div>
+
   return (
     <>
       <Navbar />
@@ -15,8 +22,13 @@ function App() {
         <Route path="/compare" element={<Compare />} />
         <Route path="/wishlist" element={<Wishlist />} />
         <Route path="/login" element={<Login />} />
-        <Route path="/admin" element={<Admin />} />
+        <Route
+          path="/admin"
+          element={role === 'admin' ? <Admin /> : <Navigate to="/" />}
+        />
+        <Route path="*" element={<NotFound />} />
       </Routes>
+      <Footer />
     </>
   )
 }

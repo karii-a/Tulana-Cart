@@ -637,6 +637,12 @@ a {
     gap: 1rem;
   }
 
+  .filter-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.4rem;
+  }
+
   .product-card {
     h3 { font-size: 1rem; }
   }
@@ -700,4 +706,104 @@ a {
   .product-card__price { font-size: 0.9rem; }
 
   .store-tag { font-size: 0.75rem; padding: 0.25rem 0.5rem; }
+}
+
+// Skeleton loading
+.skeleton {
+  padding: 1rem;
+}
+
+.skeleton-line {
+  background: linear-gradient(90deg, #eee 25%, #f5f5f5 50%, #eee 75%);
+  background-size: 200% 100%;
+  animation: skeleton-loading 1.5s infinite;
+  border-radius: 4px;
+  margin-bottom: 0.6rem;
+}
+
+.skeleton-title { height: 20px; width: 70%; }
+.skeleton-text { height: 14px; width: 50%; }
+.skeleton-price { height: 16px; width: 40%; }
+
+@keyframes skeleton-loading {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+.filter-section {
+  margin-bottom: 1.5rem;
+}
+
+.filter-row {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  margin-bottom: 0.8rem;
+}
+
+.filter-label {
+  font-weight: 600;
+  color: $text;
+  font-size: 0.9rem;
+  flex-shrink: 0;
+}
+
+.cat-btn--store {
+  border-color: $secondary;
+  color: $secondary;
+  &.active, &:hover {
+    background: $secondary;
+    color: $white;
+  }
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+// Footer
+.footer {
+  text-align: center;
+  padding: 2rem 1rem;
+  margin-top: 3rem;
+  background: $primary;
+  color: $white;
+
+  p { margin-bottom: 0.3rem; }
+  &__credit { font-size: 0.8rem; opacity: 0.8; }
+}
+
+// 404
+.not-found {
+  text-align: center;
+  padding: 5rem 1rem;
+
+  h1 {
+    font-size: 5rem;
+    color: $primary;
+    margin-bottom: 0.5rem;
+  }
+
+  p {
+    font-size: 1.2rem;
+    color: $text-light;
+    margin-bottom: 1.5rem;
+  }
+
+  a {
+    background: $primary;
+    color: $white;
+    padding: 0.7rem 1.5rem;
+    border-radius: $radius;
+    font-weight: 600;
+    &:hover { background: $primary-light; }
+  }
 }
