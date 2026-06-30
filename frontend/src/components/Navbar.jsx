@@ -22,6 +22,7 @@ function Navbar() {
       <div className="navbar__links">
         <Link to="/">{lang === 'en' ? 'Home' : 'गृहपृष्ठ'}</Link>
         <Link to="/wishlist">{lang === 'en' ? 'Wishlist' : 'इच्छासूची'}</Link>
+        <Link to="/compare">{lang === 'en' ? 'Compare' : 'तुलना'}</Link>
         {role === 'admin' && (
           <Link to="/admin">{lang === 'en' ? 'Admin' : 'एडमिन'}</Link>
         )}
