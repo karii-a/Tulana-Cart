@@ -84,6 +84,9 @@ function Profile() {
                   <span className="order-card__date">
                     {new Date(order.created_at).toLocaleDateString('en-NP')}
                   </span>
+                  <span className="order-card__id" style={{cursor:'pointer', color: '#2e7d32'}} onClick={() => navigate(`/order/${order.id}`)}>
+  Order #{order.id} →
+</span>
                 </div>
                 <div className="order-card__right">
                   <span className={`order-status ${getStatusColor(order.status)}`}>

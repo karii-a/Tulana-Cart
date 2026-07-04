@@ -13,6 +13,7 @@ import PaymentSuccess from './pages/PaymentSuccess'
 import PaymentFailed from './pages/PaymentFailed'
 import Profile from './pages/Profile'
 import ProductDetail from './pages/ProductDetail'
+import OrderTracking from './pages/OrderTracking'
 
 
 function App() {
@@ -30,6 +31,7 @@ function App() {
         <Route path="/login" element={<Login />} />
         <Route path="/cart" element={<Cart />} />
         <Route path="/profile" element={<Profile />} />
+        <Route path="/order/:id" element={<OrderTracking />} />
         <Route path="/product/:id" element={<ProductDetail />} />
         
 <Route path="/payment-success" element={<PaymentSuccess />} />

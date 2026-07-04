@@ -1,113 +1,80 @@
 import { useState, useEffect } from 'react'
-import { useLang } from '../context/LangContext'
-import { useAuth } from '../context/AuthContext'
 import { supabase } from '../lib/supabase'
+import { useAuth } from '../context/AuthContext'
+import { useLang } from '../context/LangContext'
+import ProductCard from '../components/ProductCard'
 import { useNavigate } from 'react-router-dom'
 
-function ProductCard({ product }) {
-  const { lang } = useLang()
+function Wishlist() {
   const { user } = useAuth()
+  const { lang } = useLang()
   const navigate = useNavigate()
-  const prices = product.product_prices ?? []
-  const nums = prices.map(p => p.price)
-  const minPrice = nums.length > 0 ? Math.min(...nums) : null
-  const bestPrice = prices.find(p => p.price === minPrice)
-  const [wishlisted, setWishlisted] = useState(false)
-  const [adding, setAdding] = useState(false)
-  const [cartMsg, setCartMsg] = useState('')
+  const [wishlist, setWishlist] = useState([])
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    if (!user || !product?.id) return
-    supabase
+    if (!user) { navigate('/login'); return }
+    fetchWishlist()
+  }, [user])
+
+  async function fetchWishlist() {
+    setLoading(true)
+    const { data, error } = await supabase
       .from('wishlist')
-      .select('id')
+      .select(`
+        id,
+        product_id,
+        products(
+          *,
+          categories(name, name_np),
+          product_prices(price, unit, store_product_url, in_stock, stores(id, name, name_np))
+        )
+      `)
       .eq('user_id', user.id)
-      .eq('product_id', product.id)
-      .single()
-      .then(({ data }) => setWishlisted(!!data))
-  }, [user, product?.id])
 
-  async function toggleWishlist(e) {
-    e.stopPropagation()
-    if (!user) { window.location.href = '/login'; return }
-    setAdding(true)
-    if (wishlisted) {
-      await supabase.from('wishlist').delete()
-        .eq('user_id', user.id).eq('product_id', product.id)
-      setWishlisted(false)
-    } else {
-      await supabase.from('wishlist').insert([{ user_id: user.id, product_id: product.id }])
-      setWishlisted(true)
+    if (!error && data) {
+      setWishlist(data.filter(w => w.products != null))
     }
-    setAdding(false)
+    setLoading(false)
   }
 
-  async function addToCart(e) {
-    e.stopPropagation()
-    if (!user) { window.location.href = '/login'; return }
-    if (!bestPrice) return
-    const { error } = await supabase.from('cart').insert([{
-      user_id: user.id,
-      product_id: product.id,
-      store_id: bestPrice.stores?.id,
-      price: bestPrice.price,
-      quantity: 1
-    }])
-    if (!error) {
-      setCartMsg('Added!')
-      setTimeout(() => setCartMsg(''), 2000)
-    }
+  async function removeFromWishlist(wishlistId) {
+    await supabase.from('wishlist').delete().eq('id', wishlistId)
+    setWishlist(prev => prev.filter(w => w.id !== wishlistId))
   }
+
+  if (loading) return <div className="loading">{lang === 'en' ? 'Loading...' : 'लोड हुँदैछ...'}</div>
 
   return (
-    <div className="product-card" onClick={() => navigate(`/product/${product.id}`)}>
-      <div className="product-card__image">
-        {product.image_url ? (
-          <img src={product.image_url} alt={product.name} />
-        ) : (
-          <div className="product-card__no-image">🛒</div>
-        )}
-        <button
-          className={`wishlist-btn ${wishlisted ? 'wishlisted' : ''}`}
-          onClick={toggleWishlist}
-          disabled={adding}
-        >
-          {wishlisted ? '❤️' : '🤍'}
-        </button>
-      </div>
+    <div className="page">
+      <h1 className="wishlist-title">
+        {lang === 'en' ? 'My Wishlist' : 'मेरो इच्छासूची'}
+      </h1>
 
-      <div className="product-card__body">
-        <h3>{lang === 'en' ? product.name : (product.name_np || product.name)}</h3>
-        <p className="product-card__brand">{product.brand}</p>
-        <p className="product-card__category">
-          {lang === 'en' ? product.categories?.name : product.categories?.name_np}
-        </p>
-        {minPrice && (
-          <p className="product-card__price">
-            From <strong>Rs. {minPrice}</strong>
-          </p>
-        )}
-        <div className="product-card__stores">
-          {prices.map((pp, i) => (
-            <a
-            
-              key={i}
-              href={pp.store_product_url ? pp.store_product_url : '#'}
-              target="_blank"
-              rel="noreferrer"
-              className="store-tag"
-              onClick={e => e.stopPropagation()}
-            >
-              {lang === 'en' ? pp.stores?.name : pp.stores?.name_np} - Rs. {pp.price}
-            </a>
+      {wishlist.length === 0 ? (
+        <div className="wishlist-empty">
+          <p>{lang === 'en' ? 'Your wishlist is empty.' : 'तपाईंको इच्छासूची खाली छ।'}</p>
+          <button onClick={() => navigate('/')}>
+            {lang === 'en' ? 'Browse Products' : 'उत्पादनहरू हेर्नुहोस्'}
+          </button>
+        </div>
+      ) : (
+        <div className="product-grid">
+          {wishlist.map(w => (
+            <div key={w.id} className="wishlist-item">
+              <ProductCard product={w.products} />
+              <button
+                className="wishlist-remove"
+                onClick={() => removeFromWishlist(w.id)}
+              >
+                {lang === 'en' ? 'Remove' : 'हटाउनुहोस्'}
+              </button>
+            </div>
           ))}
         </div>
-        <button className="cart-btn" onClick={addToCart}>
-          {cartMsg ? cartMsg : (lang === 'en' ? '🛒 Add to Cart' : '🛒 कार्टमा थप्नुहोस्')}
-        </button>
-      </div>
+      )}
     </div>
   )
 }
 
-export default ProductCard
+export default Wishlist
