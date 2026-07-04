@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useLang } from '../context/LangContext'
 import { useAuth } from '../context/AuthContext'
 import { supabase } from '../lib/supabase'
@@ -8,13 +8,27 @@ function ProductCard({ product }) {
   const { lang } = useLang()
   const { user } = useAuth()
   const navigate = useNavigate()
-  const prices = product.product_prices ?? []
-  const nums = prices.map(p => p.price)
-  const minPrice = nums.length > 0 ? Math.min(...nums) : null
-  const bestPrice = prices.find(p => p.price === minPrice)
   const [wishlisted, setWishlisted] = useState(false)
   const [adding, setAdding] = useState(false)
   const [cartMsg, setCartMsg] = useState('')
+
+  const prices = product?.product_prices ?? []
+  const nums = prices.map(p => p.price)
+  const minPrice = nums.length > 0 ? Math.min(...nums) : null
+  const bestPrice = prices.find(p => p.price === minPrice)
+
+  useEffect(() => {
+    if (!user || !product?.id) return
+    supabase
+      .from('wishlist')
+      .select('id')
+      .eq('user_id', user.id)
+      .eq('product_id', product.id)
+      .single()
+      .then(({ data }) => setWishlisted(!!data))
+  }, [user, product?.id])
+
+  if (!product) return null
 
   async function toggleWishlist(e) {
     e.stopPropagation()
