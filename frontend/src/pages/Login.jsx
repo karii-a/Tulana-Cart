@@ -30,7 +30,7 @@ function Login() {
   async function handleGoogleLogin() {
     await supabase.auth.signInWithOAuth({
       provider: 'google',
-      options: { redirectTo: 'http://localhost:5173' }
+      options: {redirectTo: window.location.origin}
     })
   }
 
