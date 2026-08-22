@@ -2117,3 +2117,33 @@ font-weight: 700;
 
 .compare-table__na { color: $text-light; }
 .compare-table__store { font-weight: 600; }
+
+
+
+.filter-field {
+display: flex;
+flex-direction: column;
+gap: 0.3rem;
+font-size: 0.85rem;
+color: $text-light;
+
+select, input {
+  padding: 0.5rem;
+  border: 1px solid #ddd;
+  border-radius: $radius;
+  font-size: 0.9rem;
+  min-width: 120px;
+}
+}
+
+.filter-clear {
+background: $bg;
+border: 1px solid #ddd;
+border-radius: $radius;
+padding: 0.55rem 1rem;
+cursor: pointer;
+font-size: 0.85rem;
+color: $text;
+
+&:hover { background: darken($bg, 5%); }
+}
