@@ -2,170 +2,155 @@ import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 import { useLang } from '../context/LangContext'
 
+const MAX_COMPARE = 4
+
 function Compare() {
   const { lang } = useLang()
   const [products, setProducts] = useState([])
-  const [selectedId, setSelectedId] = useState('')
-  const [selectedProduct, setSelectedProduct] = useState(null)
   const [loading, setLoading] = useState(true)
+  const [query, setQuery] = useState('')
+  const [selectedIds, setSelectedIds] = useState([])
 
   useEffect(() => {
     fetchProducts()
   }, [])
 
   async function fetchProducts() {
-    const { data } = await supabase
+    setLoading(true)
+    const { data, error } = await supabase
       .from('products')
       .select(`
         *,
         categories(name, name_np),
-        product_prices(
-          price,
-          unit,
-          store_product_url,
-          in_stock,
-          stores(id, name, name_np)
-        )
+        product_prices(price, unit, store_product_url, in_stock, stores(id, name, name_np))
       `)
-
-    setProducts(data || [])
+    if (!error) setProducts(data || [])
     setLoading(false)
   }
 
-  function handleSelect(id) {
-    setSelectedId(id)
+  const filtered = query
+    ? products.filter(p =>
+        p.name.toLowerCase().includes(query.toLowerCase()) ||
+        (p.name_np && p.name_np.includes(query))
+      )
+    : products
 
-    const found = products.find(
-      (p) => p.id === parseInt(id)
-    )
+  const selected = selectedIds
+    .map(id => products.find(p => p.id === id))
+    .filter(Boolean)
 
-    setSelectedProduct(found || null)
+  // Unique stores across the selected products, so rows line up
+  const storeMap = new Map()
+  selected.forEach(p => {
+    (p.product_prices ?? []).forEach(pp => {
+      if (pp.stores?.id) storeMap.set(pp.stores.id, pp.stores)
+    })
+  })
+  const stores = Array.from(storeMap.values())
+
+  function toggleSelect(id) {
+    setSelectedIds(prev => {
+      if (prev.includes(id)) return prev.filter(x => x !== id)
+      if (prev.length >= MAX_COMPARE) return prev
+      return [...prev, id]
+    })
   }
 
-  const sortedPrices = selectedProduct
-    ? [...(selectedProduct.product_prices || [])].sort(
-        (a, b) => a.price - b.price
-      )
-    : []
+  function priceFor(product, storeId) {
+    return (product.product_prices ?? []).find(pp => pp.stores?.id === storeId)
+  }
+
+  function cheapestPriceForProduct(product) {
+    const nums = (product.product_prices ?? []).map(pp => pp.price)
+    return nums.length > 0 ? Math.min(...nums) : null
+  }
 
   return (
     <div className="page">
-      <h1 className="compare-title">
+      <h1>{lang === 'en' ? 'Compare Products' : 'उत्पादनहरू तुलना गर्नुहोस्'}</h1>
+      <p className="compare-hint">
         {lang === 'en'
-          ? 'Compare Prices'
-          : 'मूल्य तुलना गर्नुहोस्'}
-      </h1>
+          ? `Select up to ${MAX_COMPARE} products to compare prices side by side.`
+          : `मूल्य तुलना गर्न ${MAX_COMPARE} सम्म उत्पादनहरू छान्नुहोस्।`}
+      </p>
 
-      <div className="compare-select-wrap">
-        <select
-          className="compare-select"
-          value={selectedId}
-          onChange={(e) => handleSelect(e.target.value)}
-        >
-          <option value="">
-            {lang === 'en'
-              ? 'Select a product to compare'
-              : 'तुलना गर्न उत्पादन छान्नुहोस्'}
-          </option>
-
-          {products.map((p) => (
-            <option key={p.id} value={p.id}>
-              {lang === 'en'
-                ? p.name
-                : (p.name_np || p.name)}
-            </option>
-          ))}
-        </select>
+      <div className="search-bar">
+        <input
+          type="text"
+          value={query}
+          onChange={e => setQuery(e.target.value)}
+          placeholder={lang === 'en' ? '🔍 Search products to add...' : '🔍 उत्पादन खोज्नुहोस्...'}
+        />
       </div>
 
-      {selectedProduct && (
-        <div className="compare-result">
-          <div className="compare-result__header">
-            <h2>
-              {lang === 'en'
-                ? selectedProduct.name
-                : (selectedProduct.name_np || selectedProduct.name)}
-            </h2>
-
-            <p>
-              {selectedProduct.brand} ·{' '}
-              {lang === 'en'
-                ? selectedProduct.categories?.name
-                : selectedProduct.categories?.name_np}
-            </p>
-          </div>
-
-          <div className="compare-list">
-            {sortedPrices.map((pp, i) => (
-              <div
-                key={i}
-                className={`compare-row ${
-                  i === 0 ? 'compare-row--best' : ''
-                }`}
-              >
-                <div className="compare-row__store">
-                  {i === 0 && (
-                    <span className="compare-badge">
-                      {lang === 'en'
-                        ? 'BEST PRICE'
-                        : 'उत्तम मूल्य'}
-                    </span>
-                  )}
-
-                  <strong>
-                    {lang === 'en'
-                      ? pp.stores?.name
-                      : pp.stores?.name_np}
-                  </strong>
-                </div>
-
-                <div className="compare-row__unit">
-                  {pp.unit}
-                </div>
-
-                <div className="compare-row__price">
-                  Rs. {pp.price}
-                </div>
-
-                <a
-                  href={pp.store_product_url || '#'}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="compare-row__link"
-                >
-                  {lang === 'en'
-                    ? 'Visit Store'
-                    : 'पसल हेर्नुहोस्'}
-                </a>
-              </div>
-            ))}
-          </div>
-
-          {sortedPrices.length > 1 && (
-            <p className="compare-savings">
-              {lang === 'en'
-                ? `You save Rs. ${
-                    sortedPrices[sortedPrices.length - 1].price -
-                    sortedPrices[0].price
-                  } by choosing ${
-                    sortedPrices[0].stores?.name
-                  }`
-                : `${sortedPrices[0].stores?.name} छान्दा रु. ${
-                    sortedPrices[sortedPrices.length - 1].price -
-                    sortedPrices[0].price
-                  } बचत हुन्छ`}
-            </p>
-          )}
+      {loading ? (
+        <div className="loading">{lang === 'en' ? 'Loading...' : 'लोड हुँदैछ...'}</div>
+      ) : (
+        <div className="compare-picker">
+          {filtered.slice(0, 20).map(p => (
+            <button
+              key={p.id}
+              className={`compare-chip ${selectedIds.includes(p.id) ? 'active' : ''}`}
+              onClick={() => toggleSelect(p.id)}
+              disabled={!selectedIds.includes(p.id) && selectedIds.length >= MAX_COMPARE}
+            >
+              {p.name}
+            </button>
+          ))}
         </div>
       )}
 
-      {!selectedProduct && !loading && (
-        <div className="compare-empty">
-          <p>
-            {lang === 'en'
-              ? 'Pick a product above to see price comparison.'
-              : 'मूल्य तुलना हेर्न माथिको उत्पादन छान्नुहोस्।'}
-          </p>
+      {selected.length === 0 ? (
+        <div className="no-results">
+          {lang === 'en' ? 'No products selected yet.' : 'अहिलेसम्म कुनै उत्पादन छानिएको छैन।'}
+        </div>
+      ) : (
+        <div className="compare-table-wrap">
+          <table className="compare-table">
+            <thead>
+              <tr>
+                <th>{lang === 'en' ? 'Store' : 'स्टोर'}</th>
+                {selected.map(p => (
+                  <th key={p.id}>
+                    {lang === 'en' ? p.name : (p.name_np || p.name)}
+                    <button className="compare-remove" onClick={() => toggleSelect(p.id)}>×</button>
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {stores.map(store => (
+                <tr key={store.id}>
+                  <td className="compare-table__store">
+                    {lang === 'en' ? store.name : (store.name_np || store.name)}
+                  </td>
+                  {selected.map(p => {
+                    const pp = priceFor(p, store.id)
+                    const cheapest = cheapestPriceForProduct(p)
+                    const isBest = pp && pp.price === cheapest
+                    return (
+                      <td key={p.id} className={isBest ? 'compare-table__best' : ''}>
+                        {pp ? (
+                          <a
+                            href={pp.store_product_url || '#'}
+                            target="_blank"
+                            rel="noreferrer"
+                            onClick={(e) => { if (!pp.store_product_url) e.preventDefault() }}
+                          >
+                            Rs. {pp.price}
+                          </a>
+                        ) : (
+                          <span className="compare-table__na">
+                            {lang === 'en' ? 'N/A' : 'उपलब्ध छैन'}
+                          </span>
+                        )}
+                      </td>
+                    )
+                  })}
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       )}
     </div>
