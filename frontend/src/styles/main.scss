@@ -1,13 +1,18 @@
 // Variables
-$primary: #2e7d32;
-$primary-light: #4caf50;
-$secondary: #ff6f00;
-$bg: #f5f5f5;
+// Deep teal + warm marigold: a pairing rooted in Nepali market colour
+// (marigold/saffron is the traditional accent) instead of the generic
+// green-and-orange grocery-app default.
+$primary: #0f6857;
+$primary-light: #14876f;
+$secondary: #e0a020;
+$bg: #f7f6f2;
 $white: #ffffff;
-$text: #212121;
-$text-light: #757575;
-$shadow: 0 2px 8px rgba(0,0,0,0.1);
-$radius: 8px;
+$text: #1f2421;
+$text-light: #6b756f;
+$shadow: 0 2px 10px rgba(15, 104, 87, 0.08);
+$radius: 10px;
+$danger: #d64545;
+$danger-bg: #fdeceb;
 
 // Reset
 * {
@@ -16,10 +21,38 @@ $radius: 8px;
   box-sizing: border-box;
 }
 
+:root {
+  --chart-bar: #{$primary-light};
+}
+
+html, body, #root {
+  height: 100%;
+}
+
 body {
   font-family: 'Segoe UI', sans-serif;
   background: $bg;
   color: $text;
+}
+
+// #root is the actual React mount point (see index.html), so it's the flex
+// column that pins the footer to the bottom. Navbar/Footer keep their
+// natural height; .main-content grows to fill whatever space is left so
+// the footer never floats up on short pages.
+#root {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+.main-content {
+  flex: 1 0 auto;
+  display: flex;
+  flex-direction: column;
+
+  // pages render a direct child (usually .page or a full-bleed layout like
+  // .admin-page); stretch it so it can fill the available height too.
+  > * { flex: 1 0 auto; }
 }
 
 a {
@@ -1038,6 +1071,114 @@ a {
   &.status--paid { background: #e8f5e9; color: $primary; }
   &.status--pending { background: #fff3e0; color: $secondary; }
   &.status--failed { background: #ffebee; color: #e53935; }
+}
+
+// Notification bell
+.notif-bell {
+  position: relative;
+
+  &__trigger {
+    background: none;
+    border: none;
+    font-size: 1.2rem;
+    cursor: pointer;
+    position: relative;
+    padding: 0.2rem;
+    line-height: 1;
+  }
+
+  &__badge {
+    position: absolute;
+    top: -4px;
+    right: -4px;
+    background: $danger;
+    color: $white;
+    font-size: 0.65rem;
+    font-weight: 700;
+    min-width: 16px;
+    height: 16px;
+    border-radius: 999px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 3px;
+  }
+}
+
+.notif-dropdown {
+  position: absolute;
+  top: calc(100% + 10px);
+  right: 0;
+  width: 320px;
+  max-width: 90vw;
+  background: $white;
+  color: $text;
+  border-radius: $radius;
+  box-shadow: 0 8px 28px rgba(0,0,0,0.18);
+  z-index: 200;
+  overflow: hidden;
+
+  &__header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.8rem 1rem;
+    border-bottom: 1px solid #f0f0f0;
+    font-weight: 700;
+    font-size: 0.9rem;
+
+    button {
+      background: none;
+      border: none;
+      color: $primary;
+      font-size: 0.75rem;
+      font-weight: 600;
+      cursor: pointer;
+      &:hover { text-decoration: underline; }
+    }
+  }
+
+  &__empty {
+    padding: 2rem 1rem;
+    text-align: center;
+    color: $text-light;
+    font-size: 0.85rem;
+  }
+
+  &__list {
+    max-height: 360px;
+    overflow-y: auto;
+  }
+}
+
+.notif-item {
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid #f7f7f7;
+  cursor: pointer;
+  text-align: left;
+
+  a { display: block; color: inherit; }
+
+  &:hover { background: #fafafa; }
+
+  &--unread {
+    background: rgba($primary, 0.06);
+    &:hover { background: rgba($primary, 0.1); }
+  }
+
+  &__title { font-weight: 700; font-size: 0.85rem; margin-bottom: 0.15rem; }
+  &__message { font-size: 0.8rem; color: $text-light; margin-bottom: 0.25rem; }
+  &__time { font-size: 0.7rem; color: $text-light; }
+}
+
+// Analytics / spending page
+.analytics-chart-card {
+  background: $white;
+  border-radius: 12px;
+  padding: 1.5rem 1rem 1rem;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+  border: 1px solid #f0f0f0;
+  margin-bottom: 2rem;
 }
 
 // Footer

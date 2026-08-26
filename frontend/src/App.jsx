@@ -14,6 +14,7 @@ import PaymentFailed from './pages/PaymentFailed'
 import Profile from './pages/Profile'
 import ProductDetail from './pages/ProductDetail'
 import OrderTracking from './pages/OrderTracking'
+import Analytics from './pages/Analytics'
 
 
 function App() {
@@ -24,24 +25,27 @@ function App() {
   return (
     <>
       <Navbar />
-      <Routes>
-        <Route path="/" element={<Home />} />
-        <Route path="/compare" element={<Compare />} />
-        <Route path="/wishlist" element={<Wishlist />} />
-        <Route path="/login" element={<Login />} />
-        <Route path="/cart" element={<Cart />} />
-        <Route path="/profile" element={<Profile />} />
-        <Route path="/order/:id" element={<OrderTracking />} />
-        <Route path="/product/:id" element={<ProductDetail />} />
-        
-<Route path="/payment-success" element={<PaymentSuccess />} />
-<Route path="/payment-failed" element={<PaymentFailed />} />
-        <Route
-          path="/admin"
-          element={role === 'admin' ? <Admin /> : <Navigate to="/" />}
-        />
-        <Route path="*" element={<NotFound />} />
-      </Routes>
+      <main className="main-content">
+        <Routes>
+          <Route path="/" element={<Home />} />
+          <Route path="/compare" element={<Compare />} />
+          <Route path="/wishlist" element={<Wishlist />} />
+          <Route path="/login" element={<Login />} />
+          <Route path="/cart" element={<Cart />} />
+          <Route path="/profile" element={<Profile />} />
+          <Route path="/analytics" element={<Analytics />} />
+          <Route path="/order/:id" element={<OrderTracking />} />
+          <Route path="/product/:id" element={<ProductDetail />} />
+
+          <Route path="/payment-success" element={<PaymentSuccess />} />
+          <Route path="/payment-failed" element={<PaymentFailed />} />
+          <Route
+            path="/admin"
+            element={role === 'admin' ? <Admin /> : <Navigate to="/" />}
+          />
+          <Route path="*" element={<NotFound />} />
+        </Routes>
+      </main>
       <Footer />
     </>
   )

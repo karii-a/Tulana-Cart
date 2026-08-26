@@ -100,7 +100,8 @@ function Cart() {
     }])
 
     // eSewa payment
-    const response = await fetch('http://localhost:3000/api/esewa/initiate', {
+    const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000'
+    const response = await fetch(`${apiUrl}/api/esewa/initiate`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ amount: total, order_id: order.id })

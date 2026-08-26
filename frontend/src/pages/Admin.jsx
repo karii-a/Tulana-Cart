@@ -65,12 +65,24 @@ function Admin() {
   }
 
   async function updateOrderStatus(orderId, newStatus) {
+    const order = orders.find(o => o.id === orderId)
     await supabase.from('orders').update({ status: newStatus }).eq('id', orderId)
     await supabase.from('order_status_history').insert([{
       order_id: orderId, status: newStatus, note: `Updated to ${newStatus} by admin`
     }])
     setOrders(prev => prev.map(o => o.id === orderId ? { ...o, status: newStatus } : o))
     setMessage(`Order #${orderId} updated to ${newStatus}`)
+
+    // Fire the in-app + email notification to the customer (best-effort;
+    // don't block the UI if the backend/email is temporarily unavailable).
+    if (order?.user_id) {
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000'
+      fetch(`${apiUrl}/api/notify/order-status`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ orderId, userId: order.user_id, status: newStatus })
+      }).catch(() => {})
+    }
   }
 
   const totalRevenue = orders.filter(o => o.status === 'paid' || o.status === 'delivered').reduce((s, o) => s + parseFloat(o.total_amount || 0), 0)

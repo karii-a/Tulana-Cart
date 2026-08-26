@@ -2,6 +2,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { useLang } from '../context/LangContext'
 import { useAuth } from '../context/AuthContext'
 import LanguageToggle from './LanguageToggle'
+import NotificationBell from './NotificationBell'
 import { supabase } from '../lib/supabase'
 
 function Navbar() {
@@ -24,6 +25,7 @@ function Navbar() {
         <Link to="/compare">{lang === 'en' ? 'Compare' : 'तुलना'}</Link>
         <Link to="/cart">{lang === 'en' ? '🛒 Cart' : '🛒 कार्ट'}</Link>
         <Link to="/wishlist">{lang === 'en' ? '♡ Wishlist' : '♡ इच्छासूची'}</Link>
+        {user && <Link to="/analytics">{lang === 'en' ? 'Spending' : 'खर्च'}</Link>}
         {role === 'admin' && (
           <Link to="/admin">{lang === 'en' ? 'Admin' : 'एडमिन'}</Link>
         )}
@@ -31,6 +33,7 @@ function Navbar() {
       <div className="navbar__right">
         {user ? (
           <>
+            <NotificationBell />
             <Link to="/profile" className="navbar__user">
               {user.user_metadata?.full_name?.split(' ')[0] || user.email?.split('@')[0]}
             </Link>
