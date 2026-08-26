@@ -75,4 +75,49 @@ module.exports = {
     // repeatedly (until it stops adding cards) before scraping.
     loadMoreButtonText: 'Load More',
   },
+  vhandar: {
+    label: 'Vhandar',
+    storeName: 'Vhandar', // created automatically on first sync if it doesn't exist yet
+    baseUrl: 'https://www.vhandar.com',
+    // Vhandar's category pages are fully server-rendered — products are
+    // already in the raw HTML, no browser/JS needed. This tells scraper.js
+    // to use httpScraper.js (plain fetch + cheerio) instead of Puppeteer,
+    // which is far more reliable than browser automation for a site like
+    // this (see BigMart's config for the contrast — that site needs a real
+    // browser and has its own routing bugs; this one doesn't need either).
+    scrapeMode: 'http',
+    // One URL per category — mapped to roughly match this app's existing
+    // filter tabs (Rice & Grains, Oil & Ghee, Lentils & Pulses, Dairy,
+    // Snacks, Beverages). Vhandar has MANY more categories than this
+    // (see https://www.vhandar.com/category for the full list) — add more
+    // /category/<slug> URLs here to broaden coverage.
+    listUrls: [
+      'https://www.vhandar.com/category/rice-atta-flour',
+      'https://www.vhandar.com/category/oil-ghee-more',
+      'https://www.vhandar.com/category/dals-pulses',
+      'https://www.vhandar.com/category/dairy-bread-eggs',
+      'https://www.vhandar.com/category/snacks-munchies',
+      'https://www.vhandar.com/category/cold-drinks-juice',
+      'https://www.vhandar.com/category/tea-coffee-health-drink',
+    ],
+    // Confirmed via inspectHttp.js against a real category page:
+    //   <div class="productCard">
+    //     <a href="/product/hulas-premium-basmati-rice-5kg">...</a>
+    //     <div class="product-img..."><img src="/api/image?url=...jpg"></div>
+    //     <p class="p-name" title="...">Hulas Premium Basmati Rice</p>
+    //     <div class="rsParent"><p class="rs">Rs</p><p class="p1">780</p></div>       (actual/sale price — just the number)
+    //     <div class="mrpParent"><div class="mrp">MRP</div><div class="p2 line-through">865</div></div>   (struck-through original price)
+    //   </div>
+    // Note: image `src` and link `href` are RELATIVE URLs (e.g.
+    // "/product/..."); httpScraper.js resolves them against baseUrl
+    // automatically.
+    // Each category page returned 10 products with no visible pagination
+    // controls in the HTML — larger categories may have more; not yet
+    // confirmed whether those paginate via a URL param or need JS.
+    cardSelector: '.productCard',
+    nameSelector: '.p-name',
+    priceSelector: '.rsParent .p1',
+    imageSelector: '.product-img img',
+    linkSelector: 'a[href^="/product/"]',
+  },
 }

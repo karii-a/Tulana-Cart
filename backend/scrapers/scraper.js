@@ -1,4 +1,5 @@
 const { launchBrowser } = require('./browser')
+const { scrapeStoreHttp } = require('./httpscraper')
 
 // Pulls the first number out of a price string like "Rs. 1,250.00" or "रु १,२५०"
 function parsePrice(text) {
@@ -106,6 +107,12 @@ async function scrapeOneUrl(page, storeConfig, url) {
  * @returns {Promise<Array<{name, price, imageUrl, url, inStock}>>}
  */
 async function scrapeStore(storeConfig) {
+  // Statically-rendered sites (e.g. Vhandar) don't need a browser at all —
+  // plain HTTP + cheerio is far more reliable for them than Puppeteer.
+  if (storeConfig.scrapeMode === 'http') {
+    return scrapeStoreHttp(storeConfig)
+  }
+
   // Back-compat: allow either `listUrls: [...]` (preferred, supports multiple
   // categories) or a single `listUrl` string (legacy — wrapped into an array).
   const urls = storeConfig.listUrls || (storeConfig.listUrl ? [storeConfig.listUrl] : [])
