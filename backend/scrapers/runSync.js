@@ -5,6 +5,35 @@ const { notifyPriceDrop } = require('../services/notify')
 
 const DEFAULT_CATEGORY_ID = 1 // fallback category for newly-discovered products
 
+// Cache store name -> id lookups for the duration of one sync run
+const storeIdCache = {}
+
+async function resolveStoreId(storeName) {
+  if (storeIdCache[storeName]) return storeIdCache[storeName]
+
+  const { data: existing } = await supabase
+    .from('stores')
+    .select('id')
+    .ilike('name', storeName)
+    .maybeSingle()
+
+  if (existing) {
+    storeIdCache[storeName] = existing.id
+    return existing.id
+  }
+
+  const { data: created, error } = await supabase
+    .from('stores')
+    .insert([{ name: storeName, name_np: storeName }])
+    .select()
+    .single()
+
+  if (error) throw new Error(`could not create store "${storeName}": ${error.message}`)
+
+  storeIdCache[storeName] = created.id
+  return created.id
+}
+
 /**
  * Runs a full sync across every store in scrapers/config.js.
  * Returns a summary object for logging / the API response.
@@ -16,6 +45,7 @@ async function runSync() {
     const result = { scraped: 0, updated: 0, created: 0, priceDrops: 0, errors: [] }
 
     try {
+      const storeId = await resolveStoreId(storeConfig.storeName)
       const items = await scrapeStore(storeConfig)
       result.scraped = items.length
 
@@ -27,7 +57,7 @@ async function runSync() {
       }
 
       for (const item of items) {
-        await upsertProduct(item, storeConfig, result)
+        await upsertProduct(item, storeConfig, storeId, result)
       }
     } catch (err) {
       result.errors.push(err.message)
@@ -40,7 +70,7 @@ async function runSync() {
   return summary
 }
 
-async function upsertProduct(item, storeConfig, result) {
+async function upsertProduct(item, storeConfig, storeId, result) {
   // Find an existing product by name (simple match — good enough for a
   // student project; a real system would match by SKU/URL).
   let { data: existingProduct } = await supabase
@@ -76,7 +106,7 @@ async function upsertProduct(item, storeConfig, result) {
     .from('product_prices')
     .select('id, price')
     .eq('product_id', productId)
-    .eq('store_id', storeConfig.storeId)
+    .eq('store_id', storeId)
     .maybeSingle()
 
   if (existingPrice) {
@@ -104,7 +134,7 @@ async function upsertProduct(item, storeConfig, result) {
   } else {
     await supabase.from('product_prices').insert([{
       product_id: productId,
-      store_id: storeConfig.storeId,
+      store_id: storeId,
       price: item.price,
       previous_price: null,
       unit: 'unit',

@@ -128,7 +128,7 @@ function Home() {
     <div className="page">
       <div className="home-hero">
         <h1>{lang === 'en' ? 'Compare Grocery Prices in Nepal' : 'नेपालमा किराना मूल्य तुलना गर्नुहोस्'}</h1>
-        <p>{lang === 'en' ? 'Find the best prices across BigMart, Bhat-Bhateni & Saleways' : 'बिगमार्ट, भाट-भटेनी र सेलवेजमा सर्वोत्तम मूल्य खोज्नुहोस्'}</p>
+        <p>{lang === 'en' ? 'Find the best prices across your favorite Nepali grocery stores' : 'तपाईंको मनपर्ने नेपाली किराना पसलहरूमा सर्वोत्तम मूल्य खोज्नुहोस्'}</p>
         <SearchBar onSearch={setQuery} />
       </div>
 
