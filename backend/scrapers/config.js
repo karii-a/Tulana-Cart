@@ -1,18 +1,20 @@
 // Configuration for each store the scraper knows about.
 //
-// bigmart.com.np and merokirana.com are React/JS single-page apps, so the
-// selectors below are BEST-GUESS starting points, not verified against the
-// live site (this project's sandbox can't launch a browser against external
-// domains). Before your first real sync:
+// Both sites organize products by category, not one giant "all products"
+// page, so `listUrls` is an ARRAY: one URL per category/collection you want
+// scraped. The scraper visits every URL in the array, clicks "Load More" (if
+// loadMoreButtonText is set) until nothing new appears, and merges all the
+// results together (de-duplicated by product name).
 //
-//   1. cd backend
-//   2. node scrapers/inspect.js bigmart
-//   3. node scrapers/inspect.js merokirana
+// To cover more of the catalog, add more category URLs to listUrls below.
+//   - BigMart: click through "All Categories" in the top nav; each category
+//     lands on a URL like https://bigmart.com.np/Section?section=N&sname=X.
+//     Add each one you want scraped.
+//   - Mero Kirana: click through the top nav (Grocery, Bakery & Dairy, etc.)
+//     or a collection page; each lands on its own /#/search/... URL.
 //
-// Each command opens the category page in headless Chrome and prints the
-// outerHTML of elements it thinks are product cards, plus screenshots to
-// backend/scrapers/debug/. Use that to fix the selectors below (right-click
-// a product price in your browser -> Inspect -> note the class name).
+// Run `node scrapers/inspect.js <store>` any time after changing selectors
+// or URLs to verify they still work before a real sync.
 //
 // bbsm.com.np (Bhat-Bhateni corporate site) has no online product catalog
 // -- it's a store locator only -- and Bhat-Bhateni/Saleways have been
@@ -24,10 +26,17 @@ module.exports = {
     label: 'BigMart',
     storeName: 'BigMart', // must match the `stores.name` value in Supabase (looked up automatically)
     baseUrl: 'https://bigmart.com.np',
-    // A category/listing page that shows many products with prices at once.
-    listUrl: 'https://bigmart.com.np/products',
+    // One URL per category. Two confirmed via discover.js so far — add more
+    // section=N URLs as you find them (see note above; the "All Categories"
+    // dropdown likely needs a manual click to reveal the rest).
+    listUrls: [
+      'https://bigmart.com.np/Section?section=17&sname=Fresh',
+      'https://bigmart.com.np/Section?section=28&sname=Mahabachat',
+    ],
     waitForSelector: '[class*="product"]',
-    // Selector for one product "card" within the listing
+    // TODO: not yet verified against real markup for this URL — run
+    // `node scrapers/inspect.js bigmart` and check the "Testing current
+    // selectors" + "Real product card HTML" sections it prints.
     cardSelector: '[class*="product-card"], [class*="ProductCard"]',
     nameSelector: '[class*="name"], [class*="title"]',
     priceSelector: '[class*="price"]',
@@ -38,12 +47,32 @@ module.exports = {
     label: 'Mero Kirana',
     storeName: 'Mero Kirana', // created automatically on first sync if it doesn't exist yet
     baseUrl: 'https://www.merokirana.com',
-    listUrl: 'https://www.merokirana.com/#/products',
-    waitForSelector: '[class*="product"]',
-    cardSelector: '[class*="product-card"], [class*="ProductCard"], [class*="product-item"]',
-    nameSelector: '[class*="name"], [class*="title"]',
-    priceSelector: '[class*="price"]',
+    // One URL per category/collection. Only "Popular Rice Deals" is confirmed
+    // so far — add more category URLs here as you find them (see note above).
+    listUrls: [
+      'https://www.merokirana.com/#/search/KiranaCollection/cd2c7d3dec9c44a4-b3e8f25a96b9945d/Popular-Rice-Deals.html',
+    ],
+    waitForSelector: '.product-card',
+    // Confirmed via inspect.js's real-HTML dump against an actual card:
+    //   <div class="product-card"> ... 
+    //     <h2 class="product-card__title" title="...">
+    //       <a href="#/detail/...">Pearl Premium (Katarni) Jeera Masino Rice, 25kg</a>
+    //     </h2>
+    //     <div class="product-card__price-container">
+    //       <span class="product-card__actual-price">NRs.2570</span>
+    //       <span class="product-card__compare-price">NRs.2701</span>  (struck-through original price)
+    //     </div>
+    //   </div>
+    // Note: the generic `[class*="title"], a` guess previously matched a
+    // "SALE" ribbon badge instead of the real title — .product-card__title
+    // is the exact, unambiguous selector.
+    cardSelector: '.product-card',
+    nameSelector: '.product-card__title',
+    priceSelector: '.product-card__price-container', // contains both prices as text; parsePrice takes the first number (the actual/sale price)
     imageSelector: 'img',
-    linkSelector: 'a',
+    linkSelector: '.product-card__title a',
+    // This page paginates with a red "Load More" button — click it
+    // repeatedly (until it stops adding cards) before scraping.
+    loadMoreButtonText: 'Load More',
   },
 }
