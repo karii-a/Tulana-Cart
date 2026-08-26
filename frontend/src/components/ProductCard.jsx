@@ -33,6 +33,15 @@ function ProductCard({ product }) {
       </button>
 
       <div className="product-card__body">
+        {product.image_url && (
+          <img
+            src={product.image_url}
+            alt={product.name}
+            className="product-card__image"
+            loading="lazy"
+          />
+        )}
+
         <h3>{product.name}</h3>
 
         <p className="product-card__brand">

@@ -110,16 +110,21 @@ async function upsertProduct(item, storeConfig, storeId, result) {
     .maybeSingle()
 
   if (existingPrice) {
-    await supabase
+    const { error } = await supabase
       .from('product_prices')
       .update({
         price: item.price,
         previous_price: existingPrice.price,
         in_stock: item.inStock,
-        scraped_url: item.url,
+        store_product_url: item.url,
         last_checked_at: new Date().toISOString(),
       })
       .eq('id', existingPrice.id)
+
+    if (error) {
+      result.errors.push(`update product_prices for "${item.name}": ${error.message}`)
+      return
+    }
 
     if (item.price < existingPrice.price) {
       result.priceDrops++
@@ -132,16 +137,21 @@ async function upsertProduct(item, storeConfig, storeId, result) {
       })
     }
   } else {
-    await supabase.from('product_prices').insert([{
+    const { error } = await supabase.from('product_prices').insert([{
       product_id: productId,
       store_id: storeId,
       price: item.price,
       previous_price: null,
       unit: 'unit',
       in_stock: item.inStock,
-      scraped_url: item.url,
+      store_product_url: item.url,
       last_checked_at: new Date().toISOString(),
     }])
+
+    if (error) {
+      result.errors.push(`insert product_prices for "${item.name}": ${error.message}`)
+      return
+    }
   }
 
   result.updated++
