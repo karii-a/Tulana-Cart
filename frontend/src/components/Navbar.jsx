@@ -23,7 +23,7 @@ function Navbar() {
       <div className="navbar__links">
         <Link to="/">{lang === 'en' ? 'Home' : 'गृहपृष्ठ'}</Link>
         <Link to="/compare">{lang === 'en' ? 'Compare' : 'तुलना'}</Link>
-        <Link to="/cart">{lang === 'en' ? '🛒 Cart' : '🛒 कार्ट'}</Link>
+        <Link to="/subscription">{lang === 'en' ? '⭐ Subscription' : '⭐ सदस्यता'}</Link>
         <Link to="/wishlist">{lang === 'en' ? '♡ Wishlist' : '♡ इच्छासूची'}</Link>
         {user && <Link to="/analytics">{lang === 'en' ? 'Spending' : 'खर्च'}</Link>}
         {role === 'admin' && (

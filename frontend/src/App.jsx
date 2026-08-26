@@ -8,9 +8,7 @@ import Login from './pages/Login'
 import Admin from './pages/Admin'
 import NotFound from './pages/NotFound'
 import { useAuth } from './context/AuthContext'
-import Cart from './pages/Cart'
-import PaymentSuccess from './pages/PaymentSuccess'
-import PaymentFailed from './pages/PaymentFailed'
+import Subscription from './pages/Subscription'
 import Profile from './pages/Profile'
 import ProductDetail from './pages/ProductDetail'
 import OrderTracking from './pages/OrderTracking'
@@ -31,14 +29,12 @@ function App() {
           <Route path="/compare" element={<Compare />} />
           <Route path="/wishlist" element={<Wishlist />} />
           <Route path="/login" element={<Login />} />
-          <Route path="/cart" element={<Cart />} />
+          <Route path="/subscription" element={<Subscription />} />
           <Route path="/profile" element={<Profile />} />
           <Route path="/analytics" element={<Analytics />} />
           <Route path="/order/:id" element={<OrderTracking />} />
           <Route path="/product/:id" element={<ProductDetail />} />
 
-          <Route path="/payment-success" element={<PaymentSuccess />} />
-          <Route path="/payment-failed" element={<PaymentFailed />} />
           <Route
             path="/admin"
             element={role === 'admin' ? <Admin /> : <Navigate to="/" />}

@@ -7,42 +7,26 @@
 // results together (de-duplicated by product name).
 //
 // To cover more of the catalog, add more category URLs to listUrls below.
-//   - BigMart: click through "All Categories" in the top nav; each category
-//     lands on a URL like https://bigmart.com.np/Section?section=N&sname=X.
-//     Add each one you want scraped.
 //   - Mero Kirana: click through the top nav (Grocery, Bakery & Dairy, etc.)
 //     or a collection page; each lands on its own /#/search/... URL.
+//   - Vhandar: click through /category on the site; each lands on its own
+//     /category/<slug> URL. See https://www.vhandar.com/category for the
+//     full list — this app only tracks a subset so far.
 //
 // Run `node scrapers/inspect.js <store>` any time after changing selectors
-// or URLs to verify they still work before a real sync.
+// or URLs to verify they still work before a real sync (or
+// `node scrapers/inspectHttp.js <url>` for http-mode stores like Vhandar).
 //
 // bbsm.com.np (Bhat-Bhateni corporate site) has no online product catalog
 // -- it's a store locator only -- and Bhat-Bhateni/Saleways have been
-// removed as stores in this app (see sql/002_stores_cleanup.sql). Only
-// BigMart and Mero Kirana are tracked now.
+// removed as stores in this app (see sql/002_stores_cleanup.sql).
+//
+// BigMart is dropped for now — its site has a client-side routing bug that
+// makes it unreliable to scrape (see git history / prior notes for details).
+// To bring it back later: re-add a `bigmart` entry here with real selectors
+// (verified via inspect.js) and a stable listUrls array.
 
 module.exports = {
-  bigmart: {
-    label: 'BigMart',
-    storeName: 'BigMart', // must match the `stores.name` value in Supabase (looked up automatically)
-    baseUrl: 'https://bigmart.com.np',
-    // One URL per category. Two confirmed via discover.js so far — add more
-    // section=N URLs as you find them (see note above; the "All Categories"
-    // dropdown likely needs a manual click to reveal the rest).
-    listUrls: [
-      'https://bigmart.com.np/Section?section=17&sname=Fresh',
-      'https://bigmart.com.np/Section?section=28&sname=Mahabachat',
-    ],
-    waitForSelector: '[class*="product"]',
-    // TODO: not yet verified against real markup for this URL — run
-    // `node scrapers/inspect.js bigmart` and check the "Testing current
-    // selectors" + "Real product card HTML" sections it prints.
-    cardSelector: '[class*="product-card"], [class*="ProductCard"]',
-    nameSelector: '[class*="name"], [class*="title"]',
-    priceSelector: '[class*="price"]',
-    imageSelector: 'img',
-    linkSelector: 'a',
-  },
   merokirana: {
     label: 'Mero Kirana',
     storeName: 'Mero Kirana', // created automatically on first sync if it doesn't exist yet

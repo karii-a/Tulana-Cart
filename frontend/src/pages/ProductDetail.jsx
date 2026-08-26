@@ -11,9 +11,7 @@ function ProductDetail() {
   const navigate = useNavigate()
   const [product, setProduct] = useState(null)
   const [loading, setLoading] = useState(true)
-  const [quantity, setQuantity] = useState(1)
   const [selectedPrice, setSelectedPrice] = useState(null)
-  const [cartMsg, setCartMsg] = useState('')
   const [wishlisted, setWishlisted] = useState(false)
 
   useEffect(() => {
@@ -60,22 +58,6 @@ function ProductDetail() {
     } else {
       await supabase.from('wishlist').insert([{ user_id: user.id, product_id: parseInt(id) }])
       setWishlisted(true)
-    }
-  }
-
-  async function addToCart() {
-    if (!user) { navigate('/login'); return }
-    if (!selectedPrice) return
-    const { error } = await supabase.from('cart').insert([{
-      user_id: user.id,
-      product_id: parseInt(id),
-      store_id: selectedPrice.stores?.id,
-      price: selectedPrice.price,
-      quantity
-    }])
-    if (!error) {
-      setCartMsg(lang === 'en' ? 'Added to cart!' : 'कार्टमा थपियो!')
-      setTimeout(() => setCartMsg(''), 2000)
     }
   }
 
@@ -148,21 +130,12 @@ function ProductDetail() {
           </div>
 
           <div className="product-detail__actions">
-            <div className="quantity-control">
-              <button onClick={() => setQuantity(q => Math.max(1, q - 1))}>-</button>
-              <span>{quantity}</span>
-              <button onClick={() => setQuantity(q => q + 1)}>+</button>
-            </div>
-
-            <button className="detail-cart-btn" onClick={addToCart}>
-              {cartMsg || (lang === 'en' ? '🛒 Add to Cart' : '🛒 कार्टमा थप्नुहोस्')}
-            </button>
-
             <button
               className={`detail-wishlist-btn ${wishlisted ? 'wishlisted' : ''}`}
               onClick={toggleWishlist}
             >
-              {wishlisted ? '❤️' : '🤍'}
+              {wishlisted ? '❤️ ' : '🤍 '}
+              {lang === 'en' ? (wishlisted ? 'Wishlisted' : 'Add to Wishlist') : (wishlisted ? 'इच्छासूचीमा' : 'इच्छासूचीमा थप्नुहोस्')}
             </button>
           </div>
 
