@@ -46,6 +46,8 @@ function Wishlist() {
           ? `Marked "${product.name}" as bought — it'll show up in Spending.`
           : `"${product.name}" किनिएको रूपमा चिन्ह लगाइयो — यो खर्चमा देखिनेछ।`
       )
+      // Purchased items don't need to stay on the wishlist anymore.
+      await removeFromWishlist(product.id)
     }
     setTimeout(() => setBoughtMsg(''), 3500)
   }
