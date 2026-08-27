@@ -27,15 +27,29 @@ function Home() {
 
   async function fetchProducts() {
     setLoading(true)
-    const { data, error } = await supabase
-      .from('products')
-      .select(`
+    const baseSelect = `
         *,
         categories(name, name_np),
         product_prices(price, unit, store_product_url, in_stock, stores(name, name_np))
-      `)
+      `
+
+    // Try newest-first (nicer UX so a fresh sync shows up right away), but
+    // don't let a guess about the column name silently break the whole
+    // page if it's wrong — fall back to an unordered fetch instead.
+    let { data, error } = await supabase
+      .from('products')
+      .select(baseSelect)
       .order('created_at', { ascending: false })
-    if (!error) setProducts(data || [])
+
+    if (error) {
+      console.warn('Ordered product fetch failed, falling back to unordered:', error.message)
+      ;({ data, error } = await supabase.from('products').select(baseSelect))
+    }
+
+    if (error) {
+      console.error('fetchProducts failed:', error.message)
+    }
+    setProducts(data || [])
     setLoading(false)
   }
 
