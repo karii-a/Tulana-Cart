@@ -2,6 +2,10 @@
 node_modules/
 **/node_modules/
 
+# Puppeteer's downloaded Chrome binary (see backend/.puppeteerrc.cjs) —
+# large, and re-downloaded automatically by "postinstall" on every install.
+**/.cache/
+
 # Environment files
 .env
 **/.env
