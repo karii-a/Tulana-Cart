@@ -1,18 +1,31 @@
+// Fonts
+// Baloo 2 (display, headings) is rounded, confident, and — importantly —
+// supports Devanagari, which matters directly here since every page has a
+// real Nepali-language mode. Manrope (body) is a clean geometric sans that
+// pairs with Baloo's warmth without competing with it.
+@import url('https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700;800&family=Manrope:wght@400;500;600;700;800&display=swap');
+
 // Variables
-// Deep teal + warm marigold: a pairing rooted in Nepali market colour
-// (marigold/saffron is the traditional accent) instead of the generic
-// green-and-orange grocery-app default.
-$primary: #0f6857;
-$primary-light: #14876f;
-$secondary: #e0a020;
-$bg: #f7f6f2;
+// Palette grounded in a Nepali kirana/spice-shop shelf rather than the
+// generic "grocery green" template: saag (spinach) green as the trusted
+// structural colour, haldi (turmeric) gold for price/value, and sindoor
+// (vermillion) reserved specifically as the "price tag" accent — the one
+// place this site spends its boldness (see the ribbon badges below).
+$primary: #1b4d3e; // saag
+$primary-light: #2f7d5e;
+$secondary: #e3a72b; // haldi
+$accent: #e3432e; // sindoor — used sparingly, for price-tag/badge moments only
+$bg: #faf6ec; // rice
 $white: #ffffff;
-$text: #1f2421;
-$text-light: #6b756f;
-$shadow: 0 2px 10px rgba(15, 104, 87, 0.08);
+$text: #2b2420; // ink
+$text-light: #8a7f72;
+$shadow: 0 2px 10px rgba(27, 77, 62, 0.1);
 $radius: 10px;
-$danger: #d64545;
-$danger-bg: #fdeceb;
+$danger: #8b2e2e; // kept deliberately distinct from $accent — muted/serious
+                   // for real errors, vs. $accent's vivid excitement for deals
+$danger-bg: #f6e6e2;
+$font-display: 'Baloo 2', 'Segoe UI', sans-serif;
+$font-body: 'Manrope', 'Segoe UI', sans-serif;
 
 // Reset
 * {
@@ -30,9 +43,17 @@ html, body, #root {
 }
 
 body {
-  font-family: 'Segoe UI', sans-serif;
+  font-family: $font-body;
   background: $bg;
   color: $text;
+}
+
+h1, h2, h3,
+.navbar__logo a,
+.subscription-tier__price-amount,
+.compare-badge,
+.product-card__price strong {
+  font-family: $font-display;
 }
 
 // #root is the actual React mount point (see index.html), so it's the flex
@@ -1941,4 +1962,141 @@ a, button { transition: all 0.2s ease; }
   .home-hero h1 { font-size: 1.2rem; }
   .product-card__price { font-size: 0.9rem; }
   .store-tag { font-size: 0.75rem; padding: 0.25rem 0.5rem; }
+}
+
+// Subscription page
+.subscription-header {
+  text-align: center;
+  margin-bottom: 2rem;
+
+  h1 { font-size: 2rem; margin-bottom: 0.5rem; color: $text; }
+  p { color: $text-light; font-size: 1rem; }
+}
+
+.subscription-toast {
+  max-width: 600px;
+  margin: 0 auto 1.5rem;
+  padding: 0.9rem 1.2rem;
+  background: #e8f5e9;
+  color: $primary;
+  border-radius: $radius;
+  text-align: center;
+  font-weight: 500;
+}
+
+.subscription-tiers {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 1.5rem;
+  align-items: stretch;
+}
+
+.subscription-tier {
+  position: relative;
+  background: $white;
+  border-radius: $radius;
+  box-shadow: $shadow;
+  padding: 1.75rem 1.5rem;
+  display: flex;
+  flex-direction: column;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+
+  &:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+  }
+
+  h2 { font-size: 1.3rem; margin-bottom: 0.75rem; color: $text; }
+
+  &--highlight {
+    border: 2px solid $primary;
+    transform: scale(1.03);
+
+    &:hover { transform: scale(1.03) translateY(-4px); }
+  }
+
+  &__badge {
+    position: absolute;
+    top: -12px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: $secondary;
+    color: $white;
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+    padding: 0.3rem 0.9rem;
+    border-radius: 20px;
+    white-space: nowrap;
+  }
+
+  &__price {
+    margin-bottom: 1.25rem;
+    display: flex;
+    align-items: baseline;
+    gap: 0.35rem;
+  }
+
+  &__price-amount { font-size: 1.8rem; font-weight: 700; color: $primary; }
+  &__price-period { color: $text-light; font-size: 0.9rem; }
+
+  &__features {
+    list-style: none;
+    padding: 0;
+    margin: 0 0 1.5rem;
+    flex: 1;
+
+    li {
+      padding: 0.4rem 0;
+      color: $text;
+      font-size: 0.92rem;
+      border-bottom: 1px solid #f0f0f0;
+      &:last-child { border-bottom: none; }
+    }
+  }
+
+  &__button {
+    padding: 0.75rem 1rem;
+    border-radius: $radius;
+    border: 2px solid $primary;
+    background: $white;
+    color: $primary;
+    font-weight: 700;
+    font-size: 0.95rem;
+    cursor: pointer;
+    transition: all 0.15s ease;
+
+    &:hover { background: $primary; color: $white; }
+
+    &--highlight {
+      background: $primary;
+      color: $white;
+      &:hover { background: $primary-light; }
+    }
+  }
+}
+
+@media (max-width: 768px) {
+  .subscription-tiers { grid-template-columns: 1fr; }
+  .subscription-tier--highlight { transform: none; &:hover { transform: translateY(-4px); } }
+}
+
+// Signature element: a real price-tag shape (cut top-left corner, like an
+// actual market sticker) in the sindoor accent, applied consistently to
+// every "this is the one to notice" badge across the site — the best price
+// in a comparison, the most popular subscription tier, a best-price store
+// tag. This is the one place the site spends its boldness; everything else
+// stays in the saag/haldi/rice palette.
+@mixin price-tag-ribbon {
+  position: relative;
+  background: $accent !important;
+  color: $white !important;
+  clip-path: polygon(12px 0, 100% 0, 100% 100%, 12px 100%, 0 50%);
+  padding-left: 1.1rem !important;
+}
+
+.compare-badge,
+.subscription-tier__badge,
+.store-tag--best {
+  @include price-tag-ribbon;
 }
