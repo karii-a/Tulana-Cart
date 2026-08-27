@@ -1,12 +1,54 @@
+import { useState } from 'react'
 import { useLang } from '../context/LangContext'
 import { useAuth } from '../context/AuthContext'
 import { useWishlist } from '../context/WishlistContext'
+import { supabase } from '../lib/supabase'
 import { Link } from 'react-router-dom'
 
 function Wishlist() {
   const { lang } = useLang()
   const { user } = useAuth()
   const { items, loading, removeFromWishlist } = useWishlist()
+  const [boughtMsg, setBoughtMsg] = useState('')
+  const [savingId, setSavingId] = useState(null)
+
+  // Records this wishlist item as a real purchase — an `orders` row plus one
+  // `order_items` row — so it shows up on the Spending/Analytics page, which
+  // reads from those same tables. Uses the best (lowest) price shown, since
+  // that's what a shopper would realistically have bought at.
+  async function markAsBought(product, price) {
+    if (!user || price == null) return
+    setSavingId(product.id)
+
+    const { data: order, error: orderError } = await supabase
+      .from('orders')
+      .insert([{ user_id: user.id, total_amount: price, status: 'delivered' }])
+      .select()
+      .single()
+
+    if (orderError || !order) {
+      setBoughtMsg(lang === 'en' ? 'Could not save purchase — try again.' : 'खरिद बचत गर्न सकिएन — फेरि प्रयास गर्नुहोस्।')
+      setSavingId(null)
+      setTimeout(() => setBoughtMsg(''), 3000)
+      return
+    }
+
+    const { error: itemError } = await supabase
+      .from('order_items')
+      .insert([{ order_id: order.id, product_id: product.id, quantity: 1, price }])
+
+    setSavingId(null)
+    if (itemError) {
+      setBoughtMsg(lang === 'en' ? 'Could not save purchase — try again.' : 'खरिद बचत गर्न सकिएन — फेरि प्रयास गर्नुहोस्।')
+    } else {
+      setBoughtMsg(
+        lang === 'en'
+          ? `Marked "${product.name}" as bought — it'll show up in Spending.`
+          : `"${product.name}" किनिएको रूपमा चिन्ह लगाइयो — यो खर्चमा देखिनेछ।`
+      )
+    }
+    setTimeout(() => setBoughtMsg(''), 3500)
+  }
 
   if (!user) {
     return (
@@ -28,6 +70,8 @@ function Wishlist() {
   return (
     <div className="page">
       <h1>{lang === 'en' ? 'My Wishlist' : 'मेरो इच्छासूची'}</h1>
+
+      {boughtMsg && <div className="wishlist-toast">{boughtMsg}</div>}
 
       {items.length === 0 ? (
         <div className="no-results">
@@ -76,12 +120,23 @@ function Wishlist() {
                       </div>
                     </td>
                     <td>
-                      <button
-                        className="admin-btn admin-btn--delete"
-                        onClick={() => removeFromWishlist(product.id)}
-                      >
-                        {lang === 'en' ? 'Remove' : 'हटाउनुहोस्'}
-                      </button>
+                      <div className="wishlist-table__actions">
+                        <button
+                          className="wishlist-bought-btn"
+                          disabled={minPrice === null || savingId === product.id}
+                          onClick={() => markAsBought(product, minPrice)}
+                        >
+                          {savingId === product.id
+                            ? (lang === 'en' ? 'Saving...' : 'बचत हुँदैछ...')
+                            : (lang === 'en' ? '✔ Mark as Bought' : '✔ किनिएको चिन्ह लगाउनुहोस्')}
+                        </button>
+                        <button
+                          className="admin-btn admin-btn--delete"
+                          onClick={() => removeFromWishlist(product.id)}
+                        >
+                          {lang === 'en' ? 'Remove' : 'हटाउनुहोस्'}
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 )

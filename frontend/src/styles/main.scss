@@ -2100,3 +2100,72 @@ a, button { transition: all 0.2s ease; }
 .store-tag--best {
   @include price-tag-ribbon;
 }
+
+// Product card wishlist heart — previously had no styling at all (rendered
+// as a bare native <button>, barely visible). Circular, floats over the
+// product image, fills with the sindoor accent once active.
+.product-card {
+  position: relative;
+}
+
+.product-card__wishlist {
+  position: absolute;
+  top: 0.6rem;
+  right: 0.6rem;
+  z-index: 2;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(255, 255, 255, 0.9);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.15);
+  font-size: 1.1rem;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: $text-light;
+  transition: transform 0.15s ease, color 0.15s ease, background 0.15s ease;
+
+  &:hover { transform: scale(1.1); background: $white; }
+
+  &.active {
+    color: $accent;
+    background: $white;
+  }
+}
+
+// Wishlist page: "Mark as Bought" action + confirmation toast
+.wishlist-toast {
+  max-width: 600px;
+  margin: 0 auto 1.25rem;
+  padding: 0.8rem 1.1rem;
+  background: #eaf3ee;
+  color: $primary;
+  border-radius: $radius;
+  text-align: center;
+  font-weight: 500;
+}
+
+.wishlist-table__actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.wishlist-bought-btn {
+  background: $primary;
+  color: $white;
+  border: none;
+  padding: 0.5rem 0.8rem;
+  border-radius: $radius;
+  font-weight: 600;
+  font-size: 0.85rem;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.15s ease;
+
+  &:hover:not(:disabled) { background: $primary-light; }
+  &:disabled { opacity: 0.6; cursor: not-allowed; }
+}
