@@ -16,6 +16,16 @@ async function launchBrowser() {
   if (RENDER) {
     const chromium = require('@sparticuz/chromium')
     const puppeteerCore = require('puppeteer-core')
+
+    if (typeof chromium.executablePath !== 'function') {
+      throw new Error(
+        `@sparticuz/chromium loaded, but executablePath isn't a function (got: ${typeof chromium.executablePath}). ` +
+        `This usually means the package didn't install/extract correctly — check Render's BUILD logs ` +
+        `(not this runtime error) for npm install warnings around "@sparticuz/chromium", disk space errors, ` +
+        `or a build timeout. Try "Clear build cache & deploy" again.`
+      )
+    }
+
     return puppeteerCore.launch({
       args: chromium.args,
       executablePath: await chromium.executablePath(),
