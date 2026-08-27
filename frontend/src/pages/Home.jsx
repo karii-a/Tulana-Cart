@@ -34,6 +34,7 @@ function Home() {
         categories(name, name_np),
         product_prices(price, unit, store_product_url, in_stock, stores(name, name_np))
       `)
+      .order('created_at', { ascending: false })
     if (!error) setProducts(data || [])
     setLoading(false)
   }
