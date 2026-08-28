@@ -2,6 +2,7 @@ const supabase = require('../supabase')
 const config = require('./config')
 const { scrapeStore } = require('./scraper')
 const { notifyPriceDrop } = require('../services/notify')
+const { findMatchingProduct } = require('./productMatcher')
 
 const DEFAULT_CATEGORY_ID = 1 // fallback category for newly-discovered products
 
@@ -41,6 +42,21 @@ async function resolveStoreId(storeName) {
 async function runSync() {
   const summary = { stores: {}, startedAt: new Date().toISOString() }
 
+  // Loaded once and kept in memory for the whole run: every existing
+  // product, plus anything created by an earlier store in THIS run, so a
+  // Vhandar item scraped after a Mero Kirana item (or vice versa) in the
+  // same sync can still match against it. See productMatcher.js for how
+  // matching works.
+  const { data: existingProducts, error: loadError } = await supabase
+    .from('products')
+    .select('id, name')
+  if (loadError) {
+    summary.stores = { _fatal: { scraped: 0, updated: 0, created: 0, priceDrops: 0, errors: [loadError.message] } }
+    summary.finishedAt = new Date().toISOString()
+    return summary
+  }
+  const knownProducts = existingProducts || []
+
   for (const [key, storeConfig] of Object.entries(config)) {
     const result = { scraped: 0, updated: 0, created: 0, priceDrops: 0, errors: [] }
 
@@ -57,7 +73,7 @@ async function runSync() {
       }
 
       for (const item of items) {
-        await upsertProduct(item, storeConfig, storeId, result)
+        await upsertProduct(item, storeConfig, storeId, result, knownProducts)
       }
     } catch (err) {
       result.errors.push(err.message)
@@ -70,16 +86,12 @@ async function runSync() {
   return summary
 }
 
-async function upsertProduct(item, storeConfig, storeId, result) {
-  // Find an existing product by name (simple match — good enough for a
-  // student project; a real system would match by SKU/URL).
-  let { data: existingProduct } = await supabase
-    .from('products')
-    .select('id')
-    .ilike('name', item.name)
-    .maybeSingle()
-
-  let productId = existingProduct?.id
+async function upsertProduct(item, storeConfig, storeId, result, knownProducts) {
+  // Fuzzy-match against every product seen so far (existing DB rows, plus
+  // anything created earlier in this same run) instead of requiring an
+  // exact name match — see productMatcher.js for why.
+  const match = findMatchingProduct(item.name, knownProducts)
+  let productId = match?.id
 
   if (!productId) {
     const { data: created, error } = await supabase
@@ -98,6 +110,7 @@ async function upsertProduct(item, storeConfig, storeId, result) {
       return
     }
     productId = created.id
+    knownProducts.push({ id: created.id, name: item.name })
     result.created++
   }
 
