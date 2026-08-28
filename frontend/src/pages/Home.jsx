@@ -33,13 +33,14 @@ function Home() {
         product_prices(price, unit, store_product_url, in_stock, stores(name, name_np))
       `
 
-    // Try newest-first (nicer UX so a fresh sync shows up right away), but
-    // don't let a guess about the column name silently break the whole
-    // page if it's wrong — fall back to an unordered fetch instead.
+    // Newest-first by id (every Supabase table has this as its primary
+    // key, so unlike a guessed timestamp column, this is guaranteed to
+    // exist) — falls back to unordered if that somehow still fails, so a
+    // bad assumption here can never take the whole page down again.
     let { data, error } = await supabase
       .from('products')
       .select(baseSelect)
-      .order('created_at', { ascending: false })
+      .order('id', { ascending: false })
 
     if (error) {
       console.warn('Ordered product fetch failed, falling back to unordered:', error.message)
