@@ -15,6 +15,27 @@ function parsePrice(text) {
   return match ? parseFloat(match[1]) : null
 }
 
+// Some sites (Vhandar included) show the weight/size as a separate badge
+// next to the product name rather than as part of the name text itself —
+// e.g. name="Hulas Premium Basmati Rice", with "20kg" shown in its own
+// element elsewhere in the card. Left alone, that makes every pack size of
+// the same product look identical and — worse — makes it impossible for
+// productMatcher.js to tell genuinely different pack sizes apart. This
+// finds a weight-like token anywhere in the card's text and appends it to
+// the name if it isn't already there, regardless of exactly which element
+// it lives in.
+function findWeightInCardText(cardText) {
+  const match = cardText.match(/(\d+(\.\d+)?)\s?(kg|kgs|gm|grams?|g|ml|ltr|litres?|liters?|l)\b/i)
+  return match ? match[0].replace(/\s+/g, '') : null
+}
+
+function withWeightAppended(name, cardText) {
+  const weight = findWeightInCardText(cardText)
+  if (!weight) return name
+  const alreadyPresent = name.toLowerCase().replace(/\s+/g, '').includes(weight.toLowerCase())
+  return alreadyPresent ? name : `${name}, ${weight}`
+}
+
 // Resolves a possibly-relative URL (e.g. "/product/foo" or
 // "/api/image?url=...") against the store's baseUrl into an absolute one.
 function resolveUrl(baseUrl, maybeRelative) {
@@ -46,14 +67,16 @@ function extractCardsFromHtml(html, storeConfig) {
 
   cards.each((_, el) => {
     const card = $(el)
-    const name = card.find(storeConfig.nameSelector).first().text().trim()
+    const rawName = card.find(storeConfig.nameSelector).first().text().trim()
     const priceText = card.find(storeConfig.priceSelector).first().text().trim()
     const imageSrc = card.find(storeConfig.imageSelector).first().attr('src')
     const href = card.find(storeConfig.linkSelector).first().attr('href')
 
-    if (!name || !priceText) return
+    if (!rawName || !priceText) return
     const price = parsePrice(priceText)
     if (price === null) return
+
+    const name = withWeightAppended(rawName, card.text())
 
     items.push({
       name,
