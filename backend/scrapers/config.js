@@ -93,13 +93,16 @@ module.exports = {
       'https://www.vhandar.com/category/tea-coffee-health-drink',
     ],
     // Category name for each entry in listUrls above (same index — see the
-    // note on merokirana.categories above for what this is for).
+    // note on merokirana.categories above for what this is for). These must
+    // match your existing `categories` table rows (case-insensitive) —
+    // aligned here to: Rice & Grains, Oil & Ghee, Lentils & Pulses, Dairy,
+    // Snacks, Beverages.
     categories: [
       'Rice & Grains',
       'Oil & Ghee',
-      'Dals & Pulses',
-      'Dairy, Bread & Eggs',
-      'Snacks & Munchies',
+      'Lentils & Pulses',
+      'Dairy',
+      'Snacks',
       'Beverages',
       'Tea & Coffee',
     ],
