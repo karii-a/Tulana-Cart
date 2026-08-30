@@ -130,7 +130,12 @@ async function scrapeStore(storeConfig) {
     )
     await page.setViewport({ width: 1366, height: 900 })
 
-    for (const url of urls) {
+    for (let i = 0; i < urls.length; i++) {
+      const url = urls[i]
+      // storeConfig.categories (added in config.js) has one entry per
+      // listUrls entry, same index — this is how each item ends up tagged
+      // with the category it was scraped under.
+      const categoryName = storeConfig.categories?.[i] || null
       let items = []
       try {
         items = await scrapeOneUrl(page, storeConfig, url)
@@ -153,7 +158,7 @@ async function scrapeStore(storeConfig) {
       for (const item of items) {
         const key = item.name.trim().toLowerCase()
         if (!seen.has(key)) {
-          seen.set(key, { ...item, url: item.url || url })
+          seen.set(key, { ...item, url: item.url || url, categoryName })
         }
       }
     }

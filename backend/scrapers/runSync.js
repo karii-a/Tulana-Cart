@@ -4,10 +4,14 @@ const { scrapeStore } = require('./scraper')
 const { notifyPriceDrop } = require('../services/notify')
 const { findMatchingProduct } = require('./productMatcher')
 
-const DEFAULT_CATEGORY_ID = 1 // fallback category for newly-discovered products
+// Fallback used only when an item has no categoryName at all (e.g. a store
+// config entry with no `categories` array — see config.js).
+const DEFAULT_CATEGORY_NAME = 'Uncategorized'
 
-// Cache store name -> id lookups for the duration of one sync run
+// Cache store name -> id and category name -> id lookups for the duration
+// of one sync run
 const storeIdCache = {}
+const categoryIdCache = {}
 
 async function resolveStoreId(storeName) {
   if (storeIdCache[storeName]) return storeIdCache[storeName]
@@ -32,6 +36,38 @@ async function resolveStoreId(storeName) {
   if (error) throw new Error(`could not create store "${storeName}": ${error.message}`)
 
   storeIdCache[storeName] = created.id
+  return created.id
+}
+
+// Looks up a category by name (case-insensitive), creating it if it
+// doesn't exist yet — same pattern as resolveStoreId above. This is what
+// actually assigns products to real categories instead of everything
+// silently landing under one hardcoded id, which is why the category
+// filter on the Home page wasn't working.
+async function resolveCategoryId(categoryName) {
+  const name = categoryName || DEFAULT_CATEGORY_NAME
+  if (categoryIdCache[name]) return categoryIdCache[name]
+
+  const { data: existing } = await supabase
+    .from('categories')
+    .select('id')
+    .ilike('name', name)
+    .maybeSingle()
+
+  if (existing) {
+    categoryIdCache[name] = existing.id
+    return existing.id
+  }
+
+  const { data: created, error } = await supabase
+    .from('categories')
+    .insert([{ name, name_np: name }])
+    .select()
+    .single()
+
+  if (error) throw new Error(`could not create category "${name}": ${error.message}`)
+
+  categoryIdCache[name] = created.id
   return created.id
 }
 
@@ -92,6 +128,7 @@ async function upsertProduct(item, storeConfig, storeId, result, knownProducts) 
   // exact name match — see productMatcher.js for why.
   const match = findMatchingProduct(item.name, knownProducts)
   let productId = match?.id
+  const categoryId = await resolveCategoryId(item.categoryName)
 
   if (!productId) {
     const { data: created, error } = await supabase
@@ -100,7 +137,7 @@ async function upsertProduct(item, storeConfig, storeId, result, knownProducts) 
         name: item.name,
         name_np: item.name,
         brand: storeConfig.label,
-        category_id: DEFAULT_CATEGORY_ID,
+        category_id: categoryId,
         image_url: item.imageUrl,
       }])
       .select()
@@ -112,6 +149,12 @@ async function upsertProduct(item, storeConfig, storeId, result, knownProducts) 
     productId = created.id
     knownProducts.push({ id: created.id, name: item.name })
     result.created++
+  } else {
+    // Existing product (e.g. from before this categorization fix was
+    // deployed, or still on category_id 1) — bring its category up to date
+    // too, so old rows self-heal on the next sync instead of staying
+    // miscategorized forever.
+    await supabase.from('products').update({ category_id: categoryId }).eq('id', productId)
   }
 
   // Find the existing price row for this product+store to compare for a drop

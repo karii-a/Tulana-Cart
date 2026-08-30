@@ -104,7 +104,12 @@ async function scrapeStoreHttp(storeConfig) {
 
   const seen = new Map()
 
-  for (const url of urls) {
+  for (let i = 0; i < urls.length; i++) {
+    const url = urls[i]
+    // storeConfig.categories (added in config.js) has one entry per
+    // listUrls entry, same index — this is how each item ends up tagged
+    // with the category it was scraped under.
+    const categoryName = storeConfig.categories?.[i] || null
     let html
     try {
       html = await fetchHtml(url)
@@ -117,7 +122,7 @@ async function scrapeStoreHttp(storeConfig) {
     for (const item of items) {
       const key = item.name.trim().toLowerCase()
       if (!seen.has(key)) {
-        seen.set(key, item)
+        seen.set(key, { ...item, categoryName })
       }
     }
   }

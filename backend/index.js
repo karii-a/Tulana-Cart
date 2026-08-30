@@ -6,6 +6,7 @@ require('dotenv').config()
 const syncRoutes = require('./routes/sync')
 const scrapeRoutes = require('./routes/scrape')
 const notificationRoutes = require('./routes/notifications')
+const subscriptionRoutes = require('./routes/subscription')
 const { runSync } = require('./scrapers/runSync')
 
 const app = express()
@@ -19,6 +20,7 @@ app.get('/', (req, res) => {
 app.use('/api', syncRoutes)
 app.use('/api', scrapeRoutes)
 app.use('/api', notificationRoutes)
+app.use('/api', subscriptionRoutes)
 
 const PORT = process.env.PORT || 3000
 app.listen(PORT, () => {

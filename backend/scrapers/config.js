@@ -36,6 +36,14 @@ module.exports = {
     listUrls: [
       'https://www.merokirana.com/#/search/KiranaCollection/cd2c7d3dec9c44a4-b3e8f25a96b9945d/Popular-Rice-Deals.html',
     ],
+    // Category name for each entry in listUrls above (same index). This is
+    // what gets saved to products.category_id (via runSync.js, which looks
+    // up/creates a matching row in the `categories` table by this name) —
+    // it's what makes the category filter buttons on the Home page actually
+    // work. Keep this array the same length as listUrls, in the same order.
+    categories: [
+      'Rice & Grains',
+    ],
     waitForSelector: '.product-card',
     // Confirmed via inspect.js's real-HTML dump against an actual card:
     //   <div class="product-card"> ... 
@@ -83,6 +91,17 @@ module.exports = {
       'https://www.vhandar.com/category/snacks-munchies',
       'https://www.vhandar.com/category/cold-drinks-juice',
       'https://www.vhandar.com/category/tea-coffee-health-drink',
+    ],
+    // Category name for each entry in listUrls above (same index — see the
+    // note on merokirana.categories above for what this is for).
+    categories: [
+      'Rice & Grains',
+      'Oil & Ghee',
+      'Dals & Pulses',
+      'Dairy, Bread & Eggs',
+      'Snacks & Munchies',
+      'Beverages',
+      'Tea & Coffee',
     ],
     // Confirmed via inspectHttp.js against a real category page:
     //   <div class="productCard">

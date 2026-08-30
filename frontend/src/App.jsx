@@ -9,6 +9,8 @@ import Admin from './pages/Admin'
 import NotFound from './pages/NotFound'
 import { useAuth } from './context/AuthContext'
 import Subscription from './pages/Subscription'
+import SubscriptionSuccess from './pages/SubscriptionSuccess'
+import SubscriptionFailed from './pages/SubscriptionFailed'
 import Profile from './pages/Profile'
 import ProductDetail from './pages/ProductDetail'
 import OrderTracking from './pages/OrderTracking'
@@ -30,6 +32,8 @@ function App() {
           <Route path="/wishlist" element={<Wishlist />} />
           <Route path="/login" element={<Login />} />
           <Route path="/subscription" element={<Subscription />} />
+          <Route path="/subscription/success" element={<SubscriptionSuccess />} />
+          <Route path="/subscription/failed" element={<SubscriptionFailed />} />
           <Route path="/profile" element={<Profile />} />
           <Route path="/analytics" element={<Analytics />} />
           <Route path="/order/:id" element={<OrderTracking />} />

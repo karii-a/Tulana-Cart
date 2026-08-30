@@ -50,19 +50,62 @@ function Subscription() {
   const navigate = useNavigate()
   const [selectedMsg, setSelectedMsg] = useState('')
 
-  function handleChoose(tier) {
+  async function handleChoose(tier) {
     if (!user) {
       navigate('/login')
       return
     }
-    // Billing isn't wired up yet — this is a placeholder until a real
-    // payment gateway (e.g. eSewa/Khalti) is connected.
-    setSelectedMsg(
-      lang === 'en'
-        ? `Thanks for your interest in ${tier.name.en}! Payment isn't set up yet — check back soon.`
-        : `${tier.name.np} मा रुचि राख्नुभएकोमा धन्यवाद! भुक्तानी अझै सेटअप भएको छैन — छिट्टै आउनुहोस्।`
-    )
-    setTimeout(() => setSelectedMsg(''), 4000)
+    if (tier.id === 'free') return
+
+    try {
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000'
+      const response = await fetch(`${apiUrl}/api/subscription/initiate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ user_id: user.id, tier_id: tier.id }),
+      })
+      const params = await response.json()
+      if (!response.ok) throw new Error(params.error || 'Could not start payment')
+
+      // Same pattern as the cart checkout flow (frontend/src/pages/Cart.jsx):
+      // build a hidden form with the signed eSewa fields and submit it,
+      // which redirects the browser to eSewa's hosted payment page.
+      const form = document.createElement('form')
+      form.method = 'POST'
+      form.action = params.payment_url
+
+      const fields = {
+        amount: params.amount,
+        tax_amount: params.tax_amount,
+        total_amount: params.total_amount,
+        transaction_uuid: params.transaction_uuid,
+        product_code: params.product_code,
+        product_service_charge: params.product_service_charge,
+        product_delivery_charge: params.product_delivery_charge,
+        success_url: params.success_url,
+        failure_url: params.failure_url,
+        signed_field_names: params.signed_field_names,
+        signature: params.signature,
+      }
+
+      Object.entries(fields).forEach(([key, val]) => {
+        const input = document.createElement('input')
+        input.type = 'hidden'
+        input.name = key
+        input.value = val
+        form.appendChild(input)
+      })
+
+      document.body.appendChild(form)
+      form.submit()
+    } catch (err) {
+      setSelectedMsg(
+        lang === 'en'
+          ? `Payment could not be started: ${err.message}`
+          : `भुक्तानी सुरु गर्न सकिएन: ${err.message}`
+      )
+      setTimeout(() => setSelectedMsg(''), 4000)
+    }
   }
 
   return (
