@@ -3,21 +3,22 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../context/AuthContext'
 import { useLang } from '../context/LangContext'
+import { useWishlist } from '../context/WishlistContext'
 
 function ProductDetail() {
   const { id } = useParams()
   const { user } = useAuth()
   const { lang } = useLang()
   const navigate = useNavigate()
+  const { isWishlisted, toggleWishlist: toggleWishlistShared } = useWishlist()
   const [product, setProduct] = useState(null)
   const [loading, setLoading] = useState(true)
   const [selectedPrice, setSelectedPrice] = useState(null)
-  const [wishlisted, setWishlisted] = useState(false)
+  const wishlisted = isWishlisted(parseInt(id))
 
   useEffect(() => {
     fetchProduct()
-    if (user) checkWishlist()
-  }, [id, user])
+  }, [id])
 
   async function fetchProduct() {
     setLoading(true)
@@ -39,26 +40,9 @@ function ProductDetail() {
     setLoading(false)
   }
 
-  async function checkWishlist() {
-    const { data } = await supabase
-      .from('wishlist')
-      .select('id')
-      .eq('user_id', user.id)
-      .eq('product_id', id)
-      .single()
-    setWishlisted(!!data)
-  }
-
   async function toggleWishlist() {
     if (!user) { navigate('/login'); return }
-    if (wishlisted) {
-      await supabase.from('wishlist').delete()
-        .eq('user_id', user.id).eq('product_id', id)
-      setWishlisted(false)
-    } else {
-      await supabase.from('wishlist').insert([{ user_id: user.id, product_id: parseInt(id) }])
-      setWishlisted(true)
-    }
+    await toggleWishlistShared(parseInt(id))
   }
 
   if (loading) return <div className="loading">Loading...</div>
