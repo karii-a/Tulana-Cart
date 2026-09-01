@@ -24,7 +24,7 @@ export function WishlistProvider({ children }) {
         products(
           *,
           categories(name, name_np),
-          product_prices(price, unit, store_product_url, in_stock, stores(name, name_np))
+          product_prices(price, unit, store_product_url, in_stock, stores(id, name, name_np))
         )
       `)
       .eq('user_id', user.id)

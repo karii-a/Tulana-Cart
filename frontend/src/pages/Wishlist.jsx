@@ -16,7 +16,7 @@ function Wishlist() {
   // `order_items` row — so it shows up on the Spending/Analytics page, which
   // reads from those same tables. Uses the best (lowest) price shown, since
   // that's what a shopper would realistically have bought at.
-  async function markAsBought(product, price) {
+  async function markAsBought(product, price, storeId) {
     if (!user || price == null) return
     setSavingId(product.id)
 
@@ -35,7 +35,7 @@ function Wishlist() {
 
     const { error: itemError } = await supabase
       .from('order_items')
-      .insert([{ order_id: order.id, product_id: product.id, quantity: 1, price }])
+      .insert([{ order_id: order.id, product_id: product.id, store_id: storeId ?? null, quantity: 1, price }])
 
     setSavingId(null)
     if (itemError) {
@@ -97,6 +97,8 @@ function Wishlist() {
                 const prices = product.product_prices ?? []
                 const nums = prices.map(p => p.price)
                 const minPrice = nums.length > 0 ? Math.min(...nums) : null
+                const bestPriceRow = prices.find(p => p.price === minPrice)
+                const bestStoreId = bestPriceRow?.stores?.id ?? null
 
                 return (
                   <tr key={item.id}>
@@ -126,7 +128,7 @@ function Wishlist() {
                         <button
                           className="wishlist-bought-btn"
                           disabled={minPrice === null || savingId === product.id}
-                          onClick={() => markAsBought(product, minPrice)}
+                          onClick={() => markAsBought(product, minPrice, bestStoreId)}
                         >
                           {savingId === product.id
                             ? (lang === 'en' ? 'Saving...' : 'बचत हुँदैछ...')

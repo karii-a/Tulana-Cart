@@ -32,7 +32,11 @@ function ProductCard({ product }) {
         {wishlisted ? "♥" : "♡"}
       </button>
 
-      <div className="product-card__body">
+      <div
+        className="product-card__body"
+        onClick={() => navigate(`/product/${product.id}`)}
+        style={{ cursor: "pointer" }}
+      >
         {product.image_url && (
           <img
             src={product.image_url}
@@ -62,7 +66,10 @@ function ProductCard({ product }) {
               target="_blank"
               rel="noreferrer"
               className={`store-tag ${pp.price === minPrice ? "store-tag--best" : ""} ${pp.in_stock === false ? "store-tag--oos" : ""}`}
-              onClick={(e) => { if (!pp.store_product_url) e.preventDefault(); }}
+              onClick={(e) => {
+                e.stopPropagation();
+                if (!pp.store_product_url) e.preventDefault();
+              }}
             >
               {pp.stores?.name} - Rs. {pp.price}
             </a>
