@@ -79,7 +79,14 @@ function findMatchingProduct(itemName, candidates) {
 
     if (itemWeight && candWeight && itemWeight !== candWeight) continue
 
-    if (Boolean(itemWeight) !== Boolean(candWeight)) continue
+    // NOTE: we used to also reject whenever only ONE side had a parseable
+    // weight (Boolean(itemWeight) !== Boolean(candWeight)). That was too
+    // strict — extractWeight() only catches specific patterns (kg/gm/ml/etc),
+    // so a listing phrased slightly differently silently loses its weight
+    // and got auto-rejected against every real match, even genuinely
+    // identical products. Missing weight on one side is now just ignored
+    // (treated as "unknown", not "different") and left to the token
+    // similarity score below to decide.
 
     const score = jaccardSimilarity(itemTokens, significantTokens(candidate.name))
     if (score > bestScore) {
