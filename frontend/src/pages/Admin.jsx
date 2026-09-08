@@ -1,15 +1,29 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 
+// Tulana Kart is a price-COMPARISON app, not a checkout system — there is no
+// cart or order fulfillment. The only thing that writes an `orders` row is a
+// user clicking "Mark as Bought" on their Wishlist (see Wishlist.jsx), which
+// just logs a self-reported purchase for their own spending page. Real money
+// moves through subscriptions (user_subscriptions / subscription_payments,
+// via eSewa — see backend/routes/subscription.js). This admin panel reflects
+// that: no delivery/status workflow, a Subscribers tab for real revenue, and
+// a read-only Purchases tab for the self-reported "bought" activity.
+
+const TIER_LABELS = { free: 'Free', smart_saver: 'Smart Saver', family: 'Family Plan' }
+
 function Admin() {
   const [products, setProducts] = useState([])
   const [categories, setCategories] = useState([])
   const [stores, setStores] = useState([])
-  const [orders, setOrders] = useState([])
+  const [purchases, setPurchases] = useState([])
+  const [subscriptions, setSubscriptions] = useState([])
+  const [payments, setPayments] = useState([])
   const [loading, setLoading] = useState(true)
   const [activeTab, setActiveTab] = useState('dashboard')
   const [form, setForm] = useState({ name: '', name_np: '', brand: '', category_id: '', image_url: '' })
   const [priceForm, setPriceForm] = useState({ product_id: '', store_id: '', price: '', unit: '', store_product_url: '' })
+  const [storeForm, setStoreForm] = useState({ name: '', name_np: '' })
   const [message, setMessage] = useState('')
   const [error, setError] = useState('')
 
@@ -17,18 +31,24 @@ function Admin() {
 
   async function fetchAll() {
     setLoading(true)
-    const [p, c, s, o] = await Promise.all([
+    const [p, c, s, purch, subs, pays] = await Promise.all([
       supabase.from('products').select('*, categories(name), product_prices(id, price, unit, stores(name))'),
       supabase.from('categories').select('*'),
-      supabase.from('stores').select('*'),
-      supabase.from('orders').select('*').order('created_at', { ascending: false })
+      supabase.from('stores').select('*, product_prices(id)'),
+      supabase.from('orders').select('*, order_items(quantity, price, products(name))').order('created_at', { ascending: false }),
+      supabase.from('user_subscriptions').select('*').order('updated_at', { ascending: false }),
+      supabase.from('subscription_payments').select('*').order('created_at', { ascending: false }),
     ])
     setProducts(p.data || [])
     setCategories(c.data || [])
     setStores(s.data || [])
-    setOrders(o.data || [])
+    setPurchases(purch.data || [])
+    setSubscriptions(subs.data || [])
+    setPayments(pays.data || [])
     setLoading(false)
   }
+
+  function flash(msg) { setMessage(msg); setTimeout(() => setMessage(''), 3000) }
 
   async function addProduct() {
     setError('')
@@ -38,14 +58,14 @@ function Admin() {
       category_id: parseInt(form.category_id), image_url: form.image_url
     }])
     if (error) setError(error.message)
-    else { setMessage('Product added!'); setForm({ name: '', name_np: '', brand: '', category_id: '', image_url: '' }); fetchAll() }
+    else { flash('Product added!'); setForm({ name: '', name_np: '', brand: '', category_id: '', image_url: '' }); fetchAll() }
   }
 
   async function deleteProduct(id) {
     if (!confirm('Delete this product and all its prices?')) return
     await supabase.from('product_prices').delete().eq('product_id', id)
     await supabase.from('products').delete().eq('id', id)
-    setMessage('Product deleted.'); fetchAll()
+    flash('Product deleted.'); fetchAll()
   }
 
   async function addPrice() {
@@ -56,37 +76,35 @@ function Admin() {
       price: parseFloat(priceForm.price), unit: priceForm.unit, store_product_url: priceForm.store_product_url
     }])
     if (error) setError(error.message)
-    else { setMessage('Price added!'); setPriceForm({ product_id: '', store_id: '', price: '', unit: '', store_product_url: '' }); fetchAll() }
+    else { flash('Price added!'); setPriceForm({ product_id: '', store_id: '', price: '', unit: '', store_product_url: '' }); fetchAll() }
   }
 
   async function deletePrice(id) {
     await supabase.from('product_prices').delete().eq('id', id)
-    setMessage('Price deleted.'); fetchAll()
+    flash('Price deleted.'); fetchAll()
   }
 
-  async function updateOrderStatus(orderId, newStatus) {
-    const order = orders.find(o => o.id === orderId)
-    await supabase.from('orders').update({ status: newStatus }).eq('id', orderId)
-    await supabase.from('order_status_history').insert([{
-      order_id: orderId, status: newStatus, note: `Updated to ${newStatus} by admin`
-    }])
-    setOrders(prev => prev.map(o => o.id === orderId ? { ...o, status: newStatus } : o))
-    setMessage(`Order #${orderId} updated to ${newStatus}`)
-
-    // Fire the in-app + email notification to the customer (best-effort;
-    // don't block the UI if the backend/email is temporarily unavailable).
-    if (order?.user_id) {
-      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000'
-      fetch(`${apiUrl}/api/notify/order-status`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ orderId, userId: order.user_id, status: newStatus })
-      }).catch(() => {})
-    }
+  async function addStore() {
+    setError('')
+    if (!storeForm.name) { setError('Store name is required.'); return }
+    const { error } = await supabase.from('stores').insert([{ name: storeForm.name, name_np: storeForm.name_np || null }])
+    if (error) setError(error.message)
+    else { flash('Store added!'); setStoreForm({ name: '', name_np: '' }); fetchAll() }
   }
 
-  const totalRevenue = orders.filter(o => o.status === 'paid' || o.status === 'delivered').reduce((s, o) => s + parseFloat(o.total_amount || 0), 0)
-  const pendingOrders = orders.filter(o => o.status === 'pending').length
+  async function deleteStore(id) {
+    if (!confirm('Delete this store and every price listed under it?')) return
+    await supabase.from('product_prices').delete().eq('store_id', id)
+    await supabase.from('stores').delete().eq('id', id)
+    flash('Store deleted.'); fetchAll()
+  }
+
+  // Real revenue: money that actually changed hands via eSewa subscriptions.
+  const subscriptionRevenue = payments.filter(p => p.status === 'paid').reduce((s, p) => s + parseFloat(p.amount || 0), 0)
+  const activeSubscribers = subscriptions.filter(s => s.status === 'active').length
+  // Secondary, self-reported signal: what users have told us they bought.
+  // Not real revenue — nothing was actually transacted through this app.
+  const trackedSpend = purchases.reduce((s, o) => s + parseFloat(o.total_amount || 0), 0)
 
   if (loading) return <div className="loading">Loading admin panel...</div>
 
@@ -100,7 +118,9 @@ function Admin() {
             { id: 'dashboard', icon: '📊', label: 'Dashboard' },
             { id: 'products', icon: '📦', label: 'Products' },
             { id: 'prices', icon: '💰', label: 'Prices' },
-            { id: 'orders', icon: '🧾', label: 'Orders' },
+            { id: 'stores', icon: '🏬', label: 'Stores' },
+            { id: 'subscribers', icon: '⭐', label: 'Subscribers' },
+            { id: 'purchases', icon: '🧾', label: 'Purchases' },
           ].map(tab => (
             <button
               key={tab.id}
@@ -120,7 +140,9 @@ function Admin() {
             {activeTab === 'dashboard' && '📊 Dashboard'}
             {activeTab === 'products' && '📦 Products'}
             {activeTab === 'prices' && '💰 Prices'}
-            {activeTab === 'orders' && '🧾 Orders'}
+            {activeTab === 'stores' && '🏬 Stores'}
+            {activeTab === 'subscribers' && '⭐ Subscribers'}
+            {activeTab === 'purchases' && '🧾 Purchases'}
           </h1>
         </div>
 
@@ -139,56 +161,73 @@ function Admin() {
                 </div>
               </div>
               <div className="admin-stat-card">
-                <div className="admin-stat-card__icon">🧾</div>
+                <div className="admin-stat-card__icon">🏬</div>
                 <div>
-                  <p className="admin-stat-card__label">Total Orders</p>
-                  <h2 className="admin-stat-card__value">{orders.length}</h2>
+                  <p className="admin-stat-card__label">Stores Tracked</p>
+                  <h2 className="admin-stat-card__value">{stores.length}</h2>
                 </div>
               </div>
               <div className="admin-stat-card">
-                <div className="admin-stat-card__icon">⏳</div>
+                <div className="admin-stat-card__icon">⭐</div>
                 <div>
-                  <p className="admin-stat-card__label">Pending Orders</p>
-                  <h2 className="admin-stat-card__value">{pendingOrders}</h2>
+                  <p className="admin-stat-card__label">Active Subscribers</p>
+                  <h2 className="admin-stat-card__value">{activeSubscribers}</h2>
                 </div>
               </div>
               <div className="admin-stat-card">
                 <div className="admin-stat-card__icon">💵</div>
                 <div>
-                  <p className="admin-stat-card__label">Total Revenue</p>
-                  <h2 className="admin-stat-card__value">Rs. {totalRevenue.toFixed(0)}</h2>
+                  <p className="admin-stat-card__label">Subscription Revenue</p>
+                  <h2 className="admin-stat-card__value">Rs. {subscriptionRevenue.toFixed(0)}</h2>
                 </div>
               </div>
             </div>
 
-            <h3 className="admin-section-title">Recent Orders</h3>
+            <h3 className="admin-section-title">Recent Subscription Payments</h3>
             <div className="admin-table-wrap">
               <table className="admin-table">
                 <thead>
-                  <tr>
-                    <th>Order</th>
-                    <th>Customer</th>
-                    <th>Total</th>
-                    <th>Status</th>
-                    <th>Date</th>
-                  </tr>
+                  <tr><th>Tier</th><th>Amount</th><th>Status</th><th>Date</th></tr>
                 </thead>
                 <tbody>
-                  {orders.slice(0, 5).map(order => (
-                    <tr key={order.id}>
-                      <td><strong>#{order.id}</strong></td>
-                      <td>{order.delivery_name || 'N/A'}</td>
-                      <td>Rs. {order.total_amount}</td>
+                  {payments.length === 0 ? (
+                    <tr><td colSpan="4" style={{textAlign:'center', padding:'2rem', color:'#999'}}>No subscription payments yet.</td></tr>
+                  ) : payments.slice(0, 5).map(pay => (
+                    <tr key={pay.id}>
+                      <td><strong>{TIER_LABELS[pay.tier_id] || pay.tier_id}</strong></td>
+                      <td>Rs. {pay.amount}</td>
                       <td>
                         <span className={`admin-badge ${
-                          order.status === 'delivered' || order.status === 'paid' ? 'admin-badge--green' :
-                          order.status === 'out_for_delivery' ? 'admin-badge--blue' :
-                          order.status === 'confirmed' ? 'admin-badge--purple' : 'admin-badge--orange'
+                          pay.status === 'paid' ? 'admin-badge--green' :
+                          pay.status === 'failed' ? 'admin-badge--orange' : 'admin-badge--blue'
                         }`}>
-                          {order.status?.toUpperCase()}
+                          {pay.status?.toUpperCase()}
                         </span>
                       </td>
-                      <td>{new Date(order.created_at).toLocaleDateString()}</td>
+                      <td>{pay.created_at ? new Date(pay.created_at).toLocaleDateString() : '—'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            <h3 className="admin-section-title">Recently Marked as Bought</h3>
+            <p style={{color: '#999', fontSize: '0.85rem', margin: '-0.5rem 0 1rem'}}>
+              Self-reported by shoppers from their Wishlist — not a real order, just what they told us they bought.
+            </p>
+            <div className="admin-table-wrap">
+              <table className="admin-table">
+                <thead>
+                  <tr><th>Product</th><th>Amount</th><th>Date</th></tr>
+                </thead>
+                <tbody>
+                  {purchases.length === 0 ? (
+                    <tr><td colSpan="3" style={{textAlign:'center', padding:'2rem', color:'#999'}}>No purchases logged yet.</td></tr>
+                  ) : purchases.slice(0, 5).map(o => (
+                    <tr key={o.id}>
+                      <td><strong>{o.order_items?.[0]?.products?.name || '—'}</strong></td>
+                      <td>Rs. {o.total_amount}</td>
+                      <td>{new Date(o.created_at).toLocaleDateString()}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -285,51 +324,159 @@ function Admin() {
           </>
         )}
 
-        {/* Orders */}
-        {activeTab === 'orders' && (
+        {/* Stores */}
+        {activeTab === 'stores' && (
           <>
-            <h3 className="admin-section-title">All Orders ({orders.length})</h3>
+            <div className="admin-form-card">
+              <h3>Add New Store</h3>
+              <p style={{color: '#999', fontSize: '0.85rem', margin: '-0.25rem 0 1rem'}}>
+                Stores are also created automatically the first time the scraper syncs a new one — this is mainly for adding a store manually before you have any prices for it.
+              </p>
+              <div className="admin-form__grid">
+                <input className="admin-input" placeholder="Store name (EN)" value={storeForm.name} onChange={e => setStoreForm({...storeForm, name: e.target.value})} />
+                <input className="admin-input" placeholder="Store name (NP, optional)" value={storeForm.name_np} onChange={e => setStoreForm({...storeForm, name_np: e.target.value})} />
+              </div>
+              <button className="admin-btn" onClick={addStore}>+ Add Store</button>
+            </div>
+
+            <h3 className="admin-section-title">All Stores ({stores.length})</h3>
             <div className="admin-table-wrap">
               <table className="admin-table">
                 <thead>
-                  <tr><th>ID</th><th>Customer</th><th>Address</th><th>Total</th><th>Date</th><th>Status</th><th>Update</th></tr>
+                  <tr><th>ID</th><th>Name</th><th>Name (NP)</th><th>Prices Listed</th><th>Action</th></tr>
                 </thead>
                 <tbody>
-                  {orders.length === 0 ? (
-                    <tr><td colSpan="7" style={{textAlign:'center', padding:'2rem', color:'#999'}}>No orders yet.</td></tr>
-                  ) : orders.map(order => (
-                    <tr key={order.id}>
-                      <td><strong>#{order.id}</strong></td>
+                  {stores.length === 0 ? (
+                    <tr><td colSpan="5" style={{textAlign:'center', padding:'2rem', color:'#999'}}>No stores yet.</td></tr>
+                  ) : stores.map(s => (
+                    <tr key={s.id}>
+                      <td><span className="admin-id">#{s.id}</span></td>
+                      <td><strong>{s.name}</strong></td>
+                      <td>{s.name_np || '—'}</td>
+                      <td><span className="admin-badge admin-badge--blue">{s.product_prices?.length || 0} prices</span></td>
+                      <td><button className="admin-btn admin-btn--delete" onClick={() => deleteStore(s.id)}>Delete</button></td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </>
+        )}
+
+        {/* Subscribers */}
+        {activeTab === 'subscribers' && (
+          <>
+            <div className="admin-stats" style={{marginBottom: '2rem'}}>
+              <div className="admin-stat-card">
+                <div className="admin-stat-card__icon">⭐</div>
+                <div>
+                  <p className="admin-stat-card__label">Active Subscribers</p>
+                  <h2 className="admin-stat-card__value">{activeSubscribers}</h2>
+                </div>
+              </div>
+              <div className="admin-stat-card">
+                <div className="admin-stat-card__icon">💵</div>
+                <div>
+                  <p className="admin-stat-card__label">Total Revenue (Paid)</p>
+                  <h2 className="admin-stat-card__value">Rs. {subscriptionRevenue.toFixed(0)}</h2>
+                </div>
+              </div>
+            </div>
+
+            <h3 className="admin-section-title">Active & Past Subscriptions ({subscriptions.length})</h3>
+            <div className="admin-table-wrap">
+              <table className="admin-table">
+                <thead>
+                  <tr><th>User ID</th><th>Tier</th><th>Status</th><th>Renews / Expired</th></tr>
+                </thead>
+                <tbody>
+                  {subscriptions.length === 0 ? (
+                    <tr><td colSpan="4" style={{textAlign:'center', padding:'2rem', color:'#999'}}>No subscriptions yet.</td></tr>
+                  ) : subscriptions.map(sub => (
+                    <tr key={sub.user_id + sub.tier_id}>
+                      <td style={{fontSize: '0.8rem'}}>{sub.user_id}</td>
+                      <td><strong>{TIER_LABELS[sub.tier_id] || sub.tier_id}</strong></td>
                       <td>
-                        <strong>{order.delivery_name || 'N/A'}</strong>
-                        {order.delivery_phone && <><br/><small style={{color:'#999'}}>{order.delivery_phone}</small></>}
-                      </td>
-                      <td style={{maxWidth:'150px', fontSize:'0.85rem'}}>{order.delivery_address || 'N/A'}</td>
-                      <td><strong>Rs. {order.total_amount}</strong></td>
-                      <td style={{fontSize:'0.85rem'}}>{new Date(order.created_at).toLocaleDateString()}</td>
-                      <td>
-                        <span className={`admin-badge ${
-                          order.status === 'delivered' || order.status === 'paid' ? 'admin-badge--green' :
-                          order.status === 'out_for_delivery' ? 'admin-badge--blue' :
-                          order.status === 'confirmed' ? 'admin-badge--purple' : 'admin-badge--orange'
-                        }`}>
-                          {order.status?.toUpperCase()}
+                        <span className={`admin-badge ${sub.status === 'active' ? 'admin-badge--green' : 'admin-badge--orange'}`}>
+                          {sub.status?.toUpperCase()}
                         </span>
                       </td>
+                      <td>{sub.current_period_end ? new Date(sub.current_period_end).toLocaleDateString() : '—'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            <h3 className="admin-section-title">Payment History ({payments.length})</h3>
+            <div className="admin-table-wrap">
+              <table className="admin-table">
+                <thead>
+                  <tr><th>User ID</th><th>Tier</th><th>Amount</th><th>Status</th><th>Date</th></tr>
+                </thead>
+                <tbody>
+                  {payments.length === 0 ? (
+                    <tr><td colSpan="5" style={{textAlign:'center', padding:'2rem', color:'#999'}}>No payments yet.</td></tr>
+                  ) : payments.map(pay => (
+                    <tr key={pay.id}>
+                      <td style={{fontSize: '0.8rem'}}>{pay.user_id}</td>
+                      <td><strong>{TIER_LABELS[pay.tier_id] || pay.tier_id}</strong></td>
+                      <td>Rs. {pay.amount}</td>
                       <td>
-                        <select
-                          className="admin-status-select"
-                          value={order.status}
-                          onChange={e => updateOrderStatus(order.id, e.target.value)}
-                        >
-                          <option value="pending">Pending</option>
-                          <option value="confirmed">Confirmed</option>
-                          <option value="processing">Processing</option>
-                          <option value="out_for_delivery">Out for Delivery</option>
-                          <option value="delivered">Delivered</option>
-                          <option value="paid">Paid</option>
-                        </select>
+                        <span className={`admin-badge ${
+                          pay.status === 'paid' ? 'admin-badge--green' :
+                          pay.status === 'failed' ? 'admin-badge--orange' : 'admin-badge--blue'
+                        }`}>
+                          {pay.status?.toUpperCase()}
+                        </span>
                       </td>
+                      <td>{pay.created_at ? new Date(pay.created_at).toLocaleDateString() : '—'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </>
+        )}
+
+        {/* Purchases (self-reported "Mark as Bought", read-only) */}
+        {activeTab === 'purchases' && (
+          <>
+            <div className="admin-stats" style={{marginBottom: '2rem'}}>
+              <div className="admin-stat-card">
+                <div className="admin-stat-card__icon">🧾</div>
+                <div>
+                  <p className="admin-stat-card__label">Purchases Logged</p>
+                  <h2 className="admin-stat-card__value">{purchases.length}</h2>
+                </div>
+              </div>
+              <div className="admin-stat-card">
+                <div className="admin-stat-card__icon">💰</div>
+                <div>
+                  <p className="admin-stat-card__label">Tracked Spend</p>
+                  <h2 className="admin-stat-card__value">Rs. {trackedSpend.toFixed(0)}</h2>
+                </div>
+              </div>
+            </div>
+            <p style={{color: '#999', fontSize: '0.85rem', margin: '-1rem 0 1rem'}}>
+              Tulana Kart doesn't have checkout or delivery — these rows come from shoppers tapping "Mark as Bought" on their Wishlist to track their own spending. There's nothing to fulfill or update here.
+            </p>
+
+            <h3 className="admin-section-title">All Purchases ({purchases.length})</h3>
+            <div className="admin-table-wrap">
+              <table className="admin-table">
+                <thead>
+                  <tr><th>ID</th><th>Product</th><th>Amount</th><th>Date</th></tr>
+                </thead>
+                <tbody>
+                  {purchases.length === 0 ? (
+                    <tr><td colSpan="4" style={{textAlign:'center', padding:'2rem', color:'#999'}}>No purchases logged yet.</td></tr>
+                  ) : purchases.map(o => (
+                    <tr key={o.id}>
+                      <td><strong>#{o.id}</strong></td>
+                      <td>{o.order_items?.map(i => i.products?.name).filter(Boolean).join(', ') || '—'}</td>
+                      <td><strong>Rs. {o.total_amount}</strong></td>
+                      <td style={{fontSize:'0.85rem'}}>{new Date(o.created_at).toLocaleDateString()}</td>
                     </tr>
                   ))}
                 </tbody>
