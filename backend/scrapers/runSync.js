@@ -101,6 +101,21 @@ async function runSync() {
       const items = await scrapeStore(storeConfig)
       result.scraped = items.length
 
+      // Per-category counts, so a category that suspiciously capped out low
+      // (e.g. stuck at 10 because pagination isn't working for it) is
+      // visible at a glance in the sync summary instead of needing a manual
+      // DB query. Uses the SAME category names as storeConfig.categories,
+      // built from the actually-scraped items (not just the config list),
+      // so a category with zero scraped items still shows up as 0 rather
+      // than silently vanishing from the summary.
+      result.byCategory = Object.fromEntries(
+        (storeConfig.categories || []).map((name) => [name, 0])
+      )
+      for (const item of items) {
+        const name = item.categoryName || DEFAULT_CATEGORY_NAME
+        result.byCategory[name] = (result.byCategory[name] || 0) + 1
+      }
+
       if (items.length === 0) {
         result.errors.push(
           'No products found — selectors in scrapers/config.js likely need fixing. Run "node scrapers/inspect.js ' +

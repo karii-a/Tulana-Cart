@@ -82,6 +82,15 @@ async function clickLoadMoreUntilDone(page, storeConfig) {
  * Scrapes one URL of a store's product listing (one category/collection page).
  */
 async function scrapeOneUrl(page, storeConfig, url) {
+  // Mero Kirana's category URLs all live on the same origin and only differ
+  // after the "#" (hash-routed SPA). Going straight from one #/... URL to
+  // another with page.goto() is a same-document navigation in most
+  // browsers — networkidle2 resolves, but the SPA's router/component state
+  // (including whatever tracks "how many items are loaded") doesn't always
+  // reset, so Load More silently stops working after the first category.
+  // Forcing a real navigation via about:blank in between guarantees a full
+  // reload and a clean router mount for every category.
+  await page.goto('about:blank')
   await page.goto(url, { waitUntil: 'networkidle2', timeout: 45000 })
 
   try {

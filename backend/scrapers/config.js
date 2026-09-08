@@ -77,7 +77,6 @@ module.exports = {
       'Baby Care',
       'Beauty & Cosmetics',
       'Veg & Fruits',
-      'Home Baking',
     ],
     waitForSelector: '.product-card',
     // Confirmed via inspect.js's real-HTML dump against an actual card:
