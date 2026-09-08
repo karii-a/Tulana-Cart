@@ -40,7 +40,7 @@ async function resolveStoreId(storeName) {
 
   const { data: created, error } = await supabase
     .from('stores')
-    .insert([{ name: storeName, name_np: storeName }])
+    .insert([{ name: storeName, name_np: null }])
     .select()
     .single()
 
@@ -72,7 +72,7 @@ async function resolveCategoryId(categoryName) {
 
   const { data: created, error } = await supabase
     .from('categories')
-    .insert([{ name, name_np: name }])
+    .insert([{ name, name_np: null }])
     .select()
     .single()
 
