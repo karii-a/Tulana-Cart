@@ -27,6 +27,7 @@ function Wishlist() {
       .single()
 
     if (orderError || !order) {
+      console.error('[Wishlist] orders insert failed:', orderError)
       setBoughtMsg(lang === 'en' ? 'Could not save purchase — try again.' : 'खरिद बचत गर्न सकिएन — फेरि प्रयास गर्नुहोस्।')
       setSavingId(null)
       setTimeout(() => setBoughtMsg(''), 3000)
@@ -39,6 +40,7 @@ function Wishlist() {
 
     setSavingId(null)
     if (itemError) {
+      console.error('[Wishlist] order_items insert failed:', itemError)
       setBoughtMsg(lang === 'en' ? 'Could not save purchase — try again.' : 'खरिद बचत गर्न सकिएन — फेरि प्रयास गर्नुहोस्।')
     } else {
       setBoughtMsg(
