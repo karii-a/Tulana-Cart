@@ -12,6 +12,19 @@ import { supabase } from '../lib/supabase'
 
 const TIER_LABELS = { free: 'Free', smart_saver: 'Smart Saver', family: 'Family Plan' }
 
+// Auth user data (name/email) lives in Supabase's protected auth.users table,
+// which the client can't query — so names have to come from the public
+// `profiles` table instead (already used for role checks in AuthContext).
+// We don't know for sure which columns it has, so we check a few common
+// possibilities and fall back to a shortened user id if none are present.
+function displayNameFor(profileMap, userId) {
+  const p = profileMap[userId]
+  const name = p?.full_name || p?.name || p?.display_name || p?.username || p?.email
+  if (name) return name
+  if (!userId) return '—'
+  return `${userId.slice(0, 8)}…`
+}
+
 function Admin() {
   const [products, setProducts] = useState([])
   const [categories, setCategories] = useState([])
@@ -19,6 +32,7 @@ function Admin() {
   const [purchases, setPurchases] = useState([])
   const [subscriptions, setSubscriptions] = useState([])
   const [payments, setPayments] = useState([])
+  const [profileMap, setProfileMap] = useState({})
   const [loading, setLoading] = useState(true)
   const [activeTab, setActiveTab] = useState('dashboard')
   const [form, setForm] = useState({ name: '', name_np: '', brand: '', category_id: '', image_url: '' })
@@ -45,6 +59,15 @@ function Admin() {
     setPurchases(purch.data || [])
     setSubscriptions(subs.data || [])
     setPayments(pays.data || [])
+
+    // Best-effort name lookup. select('*') so this works whatever columns
+    // `profiles` actually has; if RLS only allows reading your own row,
+    // this just comes back thin and everyone falls back to a shortened id.
+    const { data: profileRows } = await supabase.from('profiles').select('*')
+    const map = {}
+    for (const row of profileRows || []) map[row.id] = row
+    setProfileMap(map)
+
     setLoading(false)
   }
 
@@ -387,14 +410,17 @@ function Admin() {
             <div className="admin-table-wrap">
               <table className="admin-table">
                 <thead>
-                  <tr><th>User ID</th><th>Tier</th><th>Status</th><th>Renews / Expired</th></tr>
+                  <tr><th>Customer</th><th>Tier</th><th>Status</th><th>Renews / Expired</th></tr>
                 </thead>
                 <tbody>
                   {subscriptions.length === 0 ? (
                     <tr><td colSpan="4" style={{textAlign:'center', padding:'2rem', color:'#999'}}>No subscriptions yet.</td></tr>
                   ) : subscriptions.map(sub => (
                     <tr key={sub.user_id + sub.tier_id}>
-                      <td style={{fontSize: '0.8rem'}}>{sub.user_id}</td>
+                      <td>
+                        <strong>{displayNameFor(profileMap, sub.user_id)}</strong>
+                        <br/><small style={{color:'#999', fontSize:'0.75rem'}}>{sub.user_id}</small>
+                      </td>
                       <td><strong>{TIER_LABELS[sub.tier_id] || sub.tier_id}</strong></td>
                       <td>
                         <span className={`admin-badge ${sub.status === 'active' ? 'admin-badge--green' : 'admin-badge--orange'}`}>
@@ -412,14 +438,17 @@ function Admin() {
             <div className="admin-table-wrap">
               <table className="admin-table">
                 <thead>
-                  <tr><th>User ID</th><th>Tier</th><th>Amount</th><th>Status</th><th>Date</th></tr>
+                  <tr><th>Customer</th><th>Tier</th><th>Amount</th><th>Status</th><th>Date</th></tr>
                 </thead>
                 <tbody>
                   {payments.length === 0 ? (
                     <tr><td colSpan="5" style={{textAlign:'center', padding:'2rem', color:'#999'}}>No payments yet.</td></tr>
                   ) : payments.map(pay => (
                     <tr key={pay.id}>
-                      <td style={{fontSize: '0.8rem'}}>{pay.user_id}</td>
+                      <td>
+                        <strong>{displayNameFor(profileMap, pay.user_id)}</strong>
+                        <br/><small style={{color:'#999', fontSize:'0.75rem'}}>{pay.user_id}</small>
+                      </td>
                       <td><strong>{TIER_LABELS[pay.tier_id] || pay.tier_id}</strong></td>
                       <td>Rs. {pay.amount}</td>
                       <td>
@@ -466,14 +495,15 @@ function Admin() {
             <div className="admin-table-wrap">
               <table className="admin-table">
                 <thead>
-                  <tr><th>ID</th><th>Product</th><th>Amount</th><th>Date</th></tr>
+                  <tr><th>ID</th><th>Customer</th><th>Product</th><th>Amount</th><th>Date</th></tr>
                 </thead>
                 <tbody>
                   {purchases.length === 0 ? (
-                    <tr><td colSpan="4" style={{textAlign:'center', padding:'2rem', color:'#999'}}>No purchases logged yet.</td></tr>
+                    <tr><td colSpan="5" style={{textAlign:'center', padding:'2rem', color:'#999'}}>No purchases logged yet.</td></tr>
                   ) : purchases.map(o => (
                     <tr key={o.id}>
                       <td><strong>#{o.id}</strong></td>
+                      <td>{displayNameFor(profileMap, o.user_id)}</td>
                       <td>{o.order_items?.map(i => i.products?.name).filter(Boolean).join(', ') || '—'}</td>
                       <td><strong>Rs. {o.total_amount}</strong></td>
                       <td style={{fontSize:'0.85rem'}}>{new Date(o.created_at).toLocaleDateString()}</td>
