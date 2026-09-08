@@ -31,10 +31,32 @@ module.exports = {
     label: 'Mero Kirana',
     storeName: 'Mero Kirana', // created automatically on first sync if it doesn't exist yet
     baseUrl: 'https://www.merokirana.com',
-    // One URL per category/collection. Only "Popular Rice Deals" is confirmed
-    // so far — add more category URLs here as you find them (see note above).
+    // One URL per category/collection.
+    //
+    // IMPORTANT — UNVERIFIED: the 10 "KiranaCategory/..." URLs below are the
+    // TOP-LEVEL nav links (Grocery, Bakery & Dairy, Beverage, etc.), pulled
+    // straight from the nav bar via console script. We don't yet know
+    // whether these top-level pages list products directly, or whether they
+    // just show a grid of sub-category TILES (the way "Cooking Oil & Ghee"
+    // and "Home-Baking" turned out to be their own separate leaf pages one
+    // level deeper). Run `node scrapers/inspect.js merokirana` after this
+    // edit — if cardSelector ('.product-card') matches 0 elements on one of
+    // these URLs, that category is a tile grid, not a product list: open it
+    // in the browser, click each tile, and swap in the resulting leaf
+    // "/#/search/..." URLs instead (same pattern as Home-Baking below).
     listUrls: [
       'https://www.merokirana.com/#/search/KiranaCollection/cd2c7d3dec9c44a4-b3e8f25a96b9945d/Popular-Rice-Deals.html',
+      'https://www.merokirana.com/#/KiranaCategory/05f8fd1183e14d7e-9e68202448f2de5f/05f8fd1183e14d7e-9e68202448f2de5f/Grocery.html',
+      'https://www.merokirana.com/#/KiranaCategory/f8af1b42636542a4-a802ecbe072d3307/f8af1b42636542a4-a802ecbe072d3307/Bakery-&-Dairy.html',
+      'https://www.merokirana.com/#/KiranaCategory/8c5ded74107648d3-96f7453d21a97db1/8c5ded74107648d3-96f7453d21a97db1/Beverage.html',
+      'https://www.merokirana.com/#/KiranaCategory/8ac3e639f1224f43-999c081adb4d0794/8ac3e639f1224f43-999c081adb4d0794/Eggs-&-Meat.html',
+      'https://www.merokirana.com/#/KiranaCategory/71b5d81886ec45e9-acae90e08f1a781d/71b5d81886ec45e9-acae90e08f1a781d/Household-Items.html',
+      'https://www.merokirana.com/#/KiranaCategory/1611ca0a01b440c6-bab84430d6d56eaa/1611ca0a01b440c6-bab84430d6d56eaa/Kitchen-&-Pet-Food.html',
+      'https://www.merokirana.com/#/KiranaCategory/2ebe55bb3cd44e5f-8bf2611c2aedcc46/2ebe55bb3cd44e5f-8bf2611c2aedcc46/Packaged-Food.html',
+      'https://www.merokirana.com/#/KiranaCategory/f9b9c14827c44100-91002b8aac8399d7/f9b9c14827c44100-91002b8aac8399d7/The-Baby-Store.html',
+      'https://www.merokirana.com/#/KiranaCategory/064af0151e7447df-851523bf7804bca3/064af0151e7447df-851523bf7804bca3/The-Beauty-Store.html',
+      'https://www.merokirana.com/#/KiranaCategory/35ae95a75bda48a3-ac60b32fab01d5db/35ae95a75bda48a3-ac60b32fab01d5db/Veg-&-Fruits.html',
+      'https://www.merokirana.com/#/KiranaCategory/44ede8a5f16147f1-861db3c6850d5bb2/44ede8a5f16147f1-861db3c6850d5bb2/Home-Baking.html',
     ],
     // Category name for each entry in listUrls above (same index). This is
     // what gets saved to products.category_id (via runSync.js, which looks
@@ -43,6 +65,17 @@ module.exports = {
     // work. Keep this array the same length as listUrls, in the same order.
     categories: [
       'Rice & Grains',
+      'Grocery',
+      'Bakery & Dairy',
+      'Beverages',
+      'Eggs & Meat',
+      'Household Items',
+      'Kitchen & Pet Food',
+      'Packaged Food',
+      'Baby Care',
+      'Beauty & Cosmetics',
+      'Veg & Fruits',
+      'Home Baking',
     ],
     waitForSelector: '.product-card',
     // Confirmed via inspect.js's real-HTML dump against an actual card:
@@ -78,11 +111,12 @@ module.exports = {
     // this (see BigMart's config for the contrast — that site needs a real
     // browser and has its own routing bugs; this one doesn't need either).
     scrapeMode: 'http',
-    // One URL per category — mapped to roughly match this app's existing
-    // filter tabs (Rice & Grains, Oil & Ghee, Lentils & Pulses, Dairy,
-    // Snacks, Beverages). Vhandar has MANY more categories than this
-    // (see https://www.vhandar.com/category for the full list) — add more
-    // /category/<slug> URLs here to broaden coverage.
+    // One URL per category, pulled from the full "OUR CATEGORIES" grid on
+    // vhandar.com/category. NOTE: the parent 'packaged-instant-food' page is
+    // deliberately left OUT — it has 8 of its own sub-category pages
+    // (noodles, pasta, soup, etc.), which are listed individually below so
+    // products get tagged with a specific category instead of one catch-all
+    // "Packaged Food" bucket.
     listUrls: [
       'https://www.vhandar.com/category/rice-atta-flour',
       'https://www.vhandar.com/category/oil-ghee-more',
@@ -91,12 +125,34 @@ module.exports = {
       'https://www.vhandar.com/category/snacks-munchies',
       'https://www.vhandar.com/category/cold-drinks-juice',
       'https://www.vhandar.com/category/tea-coffee-health-drink',
+      'https://www.vhandar.com/category/packaged-instant-food/noodles',
+      'https://www.vhandar.com/category/packaged-instant-food/pasta',
+      'https://www.vhandar.com/category/packaged-instant-food/soup',
+      'https://www.vhandar.com/category/packaged-instant-food/baking-mixes-ingredients',
+      'https://www.vhandar.com/category/packaged-instant-food/ready-to-cook-eat',
+      'https://www.vhandar.com/category/packaged-instant-food/frozen-veg-snacks',
+      'https://www.vhandar.com/category/packaged-instant-food/frozen-non-veg-snacks',
+      'https://www.vhandar.com/category/packaged-instant-food/herbs-seasoning',
+      'https://www.vhandar.com/category/masala-dry-fruits-more',
+      'https://www.vhandar.com/category/sauces-spreads',
+      'https://www.vhandar.com/category/sweet-tooth',
+      'https://www.vhandar.com/category/liquors-smoke',
+      'https://www.vhandar.com/category/beauty-cosmetics',
+      'https://www.vhandar.com/category/cleaning-essentials',
+      'https://www.vhandar.com/category/personal-care',
+      'https://www.vhandar.com/category/home-office',
+      'https://www.vhandar.com/category/pharma-wellness',
+      'https://www.vhandar.com/category/baby-care',
+      'https://www.vhandar.com/category/organic-healthy-living',
+      'https://www.vhandar.com/category/bakery-biscuits',
+      'https://www.vhandar.com/category/horeca',
+      'https://www.vhandar.com/category/packaging-material',
     ],
     // Category name for each entry in listUrls above (same index — see the
-    // note on merokirana.categories above for what this is for). These must
-    // match your existing `categories` table rows (case-insensitive) —
-    // aligned here to: Rice & Grains, Oil & Ghee, Lentils & Pulses, Dairy,
-    // Snacks, Beverages.
+    // note on merokirana.categories above for what this is for). The first
+    // few are aligned to match this app's existing filter tabs; the rest are
+    // new names — check them against your `categories` table and rename any
+    // that should map onto an existing tab instead of creating a new one.
     categories: [
       'Rice & Grains',
       'Oil & Ghee',
@@ -105,6 +161,28 @@ module.exports = {
       'Snacks',
       'Beverages',
       'Tea & Coffee',
+      'Noodles',
+      'Pasta',
+      'Soup',
+      'Baking Mixes & Ingredients',
+      'Ready to Cook & Eat',
+      'Frozen Veg Snacks',
+      'Frozen Non-Veg Snacks',
+      'Herbs & Seasoning',
+      'Masala & Dry Fruits',
+      'Sauces & Spreads',
+      'Sweets & Confectionery',
+      'Liquor & Tobacco',
+      'Beauty & Cosmetics',
+      'Cleaning Essentials',
+      'Personal Care',
+      'Home & Office',
+      'Pharma & Wellness',
+      'Baby Care',
+      'Organic & Healthy Living',
+      'Bakery & Biscuits',
+      'HoReCa',
+      'Packaging Material',
     ],
     // Confirmed via inspectHttp.js against a real category page:
     //   <div class="productCard">
