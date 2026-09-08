@@ -33,17 +33,20 @@ module.exports = {
     baseUrl: 'https://www.merokirana.com',
     // One URL per category/collection.
     //
-    // IMPORTANT — UNVERIFIED: the 10 "KiranaCategory/..." URLs below are the
-    // TOP-LEVEL nav links (Grocery, Bakery & Dairy, Beverage, etc.), pulled
-    // straight from the nav bar via console script. We don't yet know
-    // whether these top-level pages list products directly, or whether they
-    // just show a grid of sub-category TILES (the way "Cooking Oil & Ghee"
-    // and "Home-Baking" turned out to be their own separate leaf pages one
-    // level deeper). Run `node scrapers/inspect.js merokirana` after this
-    // edit — if cardSelector ('.product-card') matches 0 elements on one of
-    // these URLs, that category is a tile grid, not a product list: open it
-    // in the browser, click each tile, and swap in the resulting leaf
-    // "/#/search/..." URLs instead (same pattern as Home-Baking below).
+    // CONFIRMED via inspect.js against all 10 URLs: these are the TOP-LEVEL
+    // nav pages (Grocery, Bakery & Dairy, Beverage, etc.) and they list
+    // products directly (not tile grids) — .product-card matched 24+
+    // elements on every one after "Load More" was clicked out (Packaged
+    // Food alone returned 168). No further verification needed here.
+    //
+    // NOTE: the old separate "Home-Baking" leaf-page entry was REMOVED.
+    // Its products already show up under "Bakery & Dairy" (confirmed: that
+    // page's own "REFINE BY" list includes "Home Baking" as a sub-filter),
+    // and scraper.js de-dupes by product name keeping whichever URL it
+    // scraped FIRST — so with Bakery & Dairy running before Home-Baking,
+    // every Home Baking product was already being claimed under the
+    // "Bakery & Dairy" category tag. Keeping the old entry added a wasted
+    // page load per sync for zero new products.
     listUrls: [
       'https://www.merokirana.com/#/search/KiranaCollection/cd2c7d3dec9c44a4-b3e8f25a96b9945d/Popular-Rice-Deals.html',
       'https://www.merokirana.com/#/KiranaCategory/05f8fd1183e14d7e-9e68202448f2de5f/05f8fd1183e14d7e-9e68202448f2de5f/Grocery.html',
@@ -56,7 +59,6 @@ module.exports = {
       'https://www.merokirana.com/#/KiranaCategory/f9b9c14827c44100-91002b8aac8399d7/f9b9c14827c44100-91002b8aac8399d7/The-Baby-Store.html',
       'https://www.merokirana.com/#/KiranaCategory/064af0151e7447df-851523bf7804bca3/064af0151e7447df-851523bf7804bca3/The-Beauty-Store.html',
       'https://www.merokirana.com/#/KiranaCategory/35ae95a75bda48a3-ac60b32fab01d5db/35ae95a75bda48a3-ac60b32fab01d5db/Veg-&-Fruits.html',
-      'https://www.merokirana.com/#/KiranaCategory/44ede8a5f16147f1-861db3c6850d5bb2/44ede8a5f16147f1-861db3c6850d5bb2/Home-Baking.html',
     ],
     // Category name for each entry in listUrls above (same index). This is
     // what gets saved to products.category_id (via runSync.js, which looks
