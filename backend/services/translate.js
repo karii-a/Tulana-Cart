@@ -1,9 +1,14 @@
 // Translates scraped product names into Nepali on demand.
 //
-// Uses Google Cloud Translation API v2 (simple REST call, no SDK needed).
-// Requires GOOGLE_TRANSLATE_API_KEY in .env — get one from
-// https://console.cloud.google.com/apis/credentials after enabling the
-// "Cloud Translation API" on a project.
+// Uses the MyMemory Translation API — completely free, no signup, no
+// credit card, no API key. Good enough for short product-name strings.
+// (Free-tier limit is ~5,000 words/day per IP address, which is plenty
+// for on-demand translation of individual product names as people view
+// them — this isn't bulk-translating your whole catalog at once.)
+//
+// If you later want higher volume or better quality, this is the only
+// file you'd need to swap out — everything else (the route, the caching
+// in Supabase, the frontend hook) stays the same either way.
 //
 // NOTE on quality: plain machine translation will happily translate brand
 // names too (e.g. "Hulas" or "Thakali" as if they were regular words),
@@ -52,25 +57,23 @@ function restore(text, found) {
 }
 
 async function translateProductName(name) {
-  const apiKey = process.env.GOOGLE_TRANSLATE_API_KEY
-  if (!apiKey) {
-    throw new Error('GOOGLE_TRANSLATE_API_KEY is not set in the backend .env')
-  }
-
   const { protectedText, found } = protect(name)
 
+  const params = new URLSearchParams({
+    q: protectedText,
+    langpair: 'en|ne', // English -> Nepali
+  })
+
+  // Optional: if you ever hit the free-tier limit, adding a contact email
+  // (de=you@example.com) as a query param raises the daily cap from
+  // ~5,000 to ~50,000 words/day, still free, no card. Uncomment and set
+  // MYMEMORY_CONTACT_EMAIL in Render's env vars if that's ever needed:
+  // if (process.env.MYMEMORY_CONTACT_EMAIL) {
+  //   params.set('de', process.env.MYMEMORY_CONTACT_EMAIL)
+  // }
+
   const res = await fetch(
-    `https://translation.googleapis.com/language/translate/v2?key=${apiKey}`,
-    {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        q: protectedText,
-        source: 'en',
-        target: 'ne', // ISO code for Nepali
-        format: 'text',
-      }),
-    }
+    `https://api.mymemory.translated.net/get?${params.toString()}`
   )
 
   if (!res.ok) {
@@ -79,10 +82,16 @@ async function translateProductName(name) {
   }
 
   const data = await res.json()
-  const translatedRaw = data?.data?.translations?.[0]?.translatedText
-  if (!translatedRaw) {
-    throw new Error('Translation API returned no result')
+  const translatedRaw = data?.responseData?.translatedText
+
+  if (!translatedRaw || data?.responseStatus !== 200) {
+    throw new Error(
+      `Translation API returned no usable result: ${JSON.stringify(data)}`
+    )
   }
+
+
+
 
   return restore(translatedRaw, found)
 }
