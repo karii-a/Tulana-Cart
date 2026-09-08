@@ -2,6 +2,7 @@ const express = require('express')
 const router = express.Router()
 const crypto = require('crypto')
 const supabase = require('../supabase')
+const { notifySubscriptionSelected } = require('../services/notify')
 
 // CHANGE THIS TO YOUR LIVE FRONTEND URL (same pattern as routes/sync.js)
 const FRONTEND_URL = process.env.FRONTEND_URL || 'https://YOUR-FRONTEND-URL.vercel.app'
@@ -46,6 +47,13 @@ router.post('/subscription/initiate', async (req, res) => {
       status: 'pending',
     }])
     if (insertError) throw insertError
+
+    // Notify now — the moment the tier is chosen, not the moment payment
+    // clears. If they never finish checkout, this is still an accurate
+    // record of "here's what they picked" and a nudge to go complete it.
+    // Best-effort: a notification hiccup shouldn't block the payment flow.
+    notifySubscriptionSelected({ userId: user_id, tierName: tier.name, amount: tier.amount })
+      .catch((err) => console.error('[subscription] notifySubscriptionSelected failed:', err.message))
 
     res.json({
       amount: total_amount,

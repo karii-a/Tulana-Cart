@@ -48,6 +48,16 @@ function Wishlist() {
       )
       // Purchased items don't need to stay on the wishlist anymore.
       await removeFromWishlist(product.id)
+
+      // Fire the in-app + email confirmation (best-effort; don't block the
+      // UI if the backend/email is temporarily unavailable — same pattern
+      // as the order-status notify call in Admin.jsx).
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000'
+      fetch(`${apiUrl}/api/notify/purchase`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: user.id, productName: product.name, amount: price }),
+      }).catch(() => {})
     }
     setTimeout(() => setBoughtMsg(''), 3500)
   }

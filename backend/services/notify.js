@@ -69,4 +69,59 @@ async function notifyOrderStatus({ orderId, userId, status }) {
   }
 }
 
-module.exports = { notifyPriceDrop, notifyOrderStatus }
+/**
+ * Notify a user that we've logged a "Mark as Bought" purchase from their
+ * Wishlist (see frontend/src/pages/Wishlist.jsx). This isn't a real order —
+ * Tulana Kart has no checkout — it's just confirming their self-reported
+ * spending was saved.
+ */
+async function notifyPurchase({ userId, productName, amount }) {
+  const title = `Marked as bought: ${productName}`
+  const message = `You marked "${productName}" as bought for Rs. ${amount}. It's now in your Spending history.`
+
+  await supabase.from('notifications').insert([{
+    user_id: userId,
+    type: 'purchase',
+    title,
+    message,
+  }])
+
+  const email = await getUserEmail(userId)
+  if (email) {
+    await sendEmail({
+      to: email,
+      subject: title,
+      html: `<p>${message}</p>`,
+    })
+  }
+}
+
+/**
+ * Notify a user right when they pick a paid tier on the Subscription page —
+ * i.e. as soon as we create the `pending` row in subscription_payments,
+ * before they've been redirected to eSewa. This fires whether or not they
+ * ever actually complete the payment, by design: it's confirming the
+ * *selection* was recorded, not that money moved.
+ */
+async function notifySubscriptionSelected({ userId, tierName, amount }) {
+  const title = `${tierName} plan selected`
+  const message = `You selected the ${tierName} plan (Rs. ${amount}/month). Complete payment via eSewa to activate it — if you haven't finished checkout yet, this plan isn't active.`
+
+  await supabase.from('notifications').insert([{
+    user_id: userId,
+    type: 'subscription_selected',
+    title,
+    message,
+  }])
+
+  const email = await getUserEmail(userId)
+  if (email) {
+    await sendEmail({
+      to: email,
+      subject: title,
+      html: `<p>${message}</p>`,
+    })
+  }
+}
+
+module.exports = { notifyPriceDrop, notifyOrderStatus, notifyPurchase, notifySubscriptionSelected }
