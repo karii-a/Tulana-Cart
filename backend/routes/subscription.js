@@ -6,17 +6,11 @@ const supabase = require('../supabase')
 // CHANGE THIS TO YOUR LIVE FRONTEND URL (same pattern as routes/sync.js)
 const FRONTEND_URL = process.env.FRONTEND_URL || 'https://YOUR-FRONTEND-URL.vercel.app'
 
-// eSewa ePay v2 endpoints. Defaults point at eSewa's UAT/test environment
-// (rc-epay / rc.esewa.com.np) so this works out of the box with the test
-// merchant credentials (product_code EPAYTEST). Set ESEWA_GATEWAY_URL and
-// ESEWA_STATUS_URL to the production URLs (epay.esewa.com.np /
-// esewa.com.np) once you have real merchant credentials.
+
 const ESEWA_GATEWAY_URL = process.env.ESEWA_GATEWAY_URL || 'https://rc-epay.esewa.com.np/api/epay/main/v2/form'
 const ESEWA_STATUS_URL = process.env.ESEWA_STATUS_URL || 'https://rc.esewa.com.np/api/epay/transaction/status/'
 
-// Paid tiers only — free has no payment step. Amounts here are the source
-// of truth for what actually gets charged; keep them in sync with the
-// prices shown on frontend/src/pages/Subscription.jsx.
+
 const TIERS = {
   smart_saver: { name: 'Smart Saver', amount: 199 },
   family: { name: 'Family Plan', amount: 349 },
@@ -27,9 +21,6 @@ function buildSignature(totalAmount, transactionUuid, productCode, secret) {
   return crypto.createHmac('sha256', secret).update(message).digest('base64')
 }
 
-// Step 1 — user picks a plan on the Subscription page. We record a pending
-// payment and hand back everything the frontend needs to build and submit
-// the eSewa form (see frontend/src/pages/Subscription.jsx).
 router.post('/subscription/initiate', async (req, res) => {
   try {
     const { user_id, tier_id } = req.body

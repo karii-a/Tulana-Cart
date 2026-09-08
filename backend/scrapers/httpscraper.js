@@ -90,6 +90,56 @@ function extractCardsFromHtml(html, storeConfig) {
   return items
 }
 
+// Appends/overwrites a `page` query param on a listing URL for page N.
+// e.g. "https://www.vhandar.com/category/rice-atta-flour" + page 2
+//   -> "https://www.vhandar.com/category/rice-atta-flour?page=2"
+function withPageParam(url, pageNumber) {
+  const u = new URL(url)
+  u.searchParams.set('page', String(pageNumber))
+  return u.href
+}
+
+// Scrapes ALL pages of a single category URL by walking page=1,2,3...
+// until a page returns zero genuinely-new items (compared against items
+// already collected from earlier pages of the SAME category), or the
+// MAX_PAGES safety cap is hit. Whatever the last successfully-fetched
+// page returned that had zero new items ends the loop — this is what
+// makes it stop instead of re-scraping page 1 forever if a site just
+// ignores an unknown/out-of-range ?page= value.
+async function scrapeAllPagesOfCategory(baseUrl, storeConfig) {
+  const MAX_PAGES = 30
+  const seenInCategory = new Map()
+
+  for (let pageNumber = 1; pageNumber <= MAX_PAGES; pageNumber++) {
+    const pageUrl = pageNumber === 1 ? baseUrl : withPageParam(baseUrl, pageNumber)
+    let html
+    try {
+      html = await fetchHtml(pageUrl)
+    } catch (err) {
+      console.error(`  [${storeConfig.label}] failed to fetch ${pageUrl}: ${err.message}`)
+      break // stop paginating this category on a fetch error; keep what we have
+    }
+
+    const items = extractCardsFromHtml(html, storeConfig)
+    let newCount = 0
+    for (const item of items) {
+      const key = item.name.trim().toLowerCase()
+      if (!seenInCategory.has(key)) {
+        seenInCategory.set(key, item)
+        newCount++
+      }
+    }
+
+    // Nothing new on this page — either we've hit the real last page, or
+    // ?page= isn't a pattern this site supports at all (in which case
+    // every "page" just re-returns page 1, so newCount is 0 immediately
+    // and we correctly stop after page 1 with no harm done).
+    if (newCount === 0) break
+  }
+
+  return Array.from(seenInCategory.values())
+}
+
 /**
  * Scrapes every listing URL configured for an HTTP-mode store and merges
  * the results, de-duplicating by product name (case-insensitive). Same
@@ -110,15 +160,8 @@ async function scrapeStoreHttp(storeConfig) {
     // listUrls entry, same index — this is how each item ends up tagged
     // with the category it was scraped under.
     const categoryName = storeConfig.categories?.[i] || null
-    let html
-    try {
-      html = await fetchHtml(url)
-    } catch (err) {
-      console.error(`  [${storeConfig.label}] failed to fetch ${url}: ${err.message}`)
-      continue
-    }
 
-    const items = extractCardsFromHtml(html, storeConfig)
+    const items = await scrapeAllPagesOfCategory(url, storeConfig)
     for (const item of items) {
       const key = item.name.trim().toLowerCase()
       if (!seen.has(key)) {

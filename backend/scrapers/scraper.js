@@ -41,12 +41,7 @@ async function extractCards(page, storeConfig) {
     .filter((item) => item.price !== null)
 }
 
-/**
- * If storeConfig.loadMoreButtonText is set, repeatedly find a clickable
- * element whose text matches it and click it, waiting for new cards to
- * appear each time. Stops when the button disappears, stops adding new
- * cards, or the safety cap is hit — whichever comes first.
- */
+
 async function clickLoadMoreUntilDone(page, storeConfig) {
   if (!storeConfig.loadMoreButtonText) return
 
@@ -58,7 +53,7 @@ async function clickLoadMoreUntilDone(page, storeConfig) {
       (sel) => document.querySelectorAll(sel).length,
       storeConfig.cardSelector
     )
-    // Stop once a click stopped adding new cards.
+
     if (currentCount === previousCount) break
     previousCount = currentCount
 

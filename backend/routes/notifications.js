@@ -2,8 +2,7 @@ const express = require('express')
 const router = express.Router()
 const { notifyOrderStatus } = require('../services/notify')
 
-// Called by the Admin page after updating an order's status.
-// Body: { orderId, userId, status }
+
 router.post('/notify/order-status', async (req, res) => {
   const { orderId, userId, status } = req.body
   if (!orderId || !userId || !status) {

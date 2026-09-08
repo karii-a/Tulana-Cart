@@ -66,13 +66,6 @@ function jaccardSimilarity(tokensA, tokensB) {
   return unionSize === 0 ? 0 : intersectionSize / unionSize
 }
 
-/**
- * @param {string} itemName - the freshly scraped product's name
- * @param {Array<{id: number, name: string}>} candidates - existing products
- *   (from the DB, plus any created earlier in the same sync run)
- * @returns {{id: number, name: string} | null} the best match, or null if
- *   nothing scored above the similarity threshold
- */
 function findMatchingProduct(itemName, candidates) {
   const itemWeight = extractWeight(itemName)
   const itemTokens = significantTokens(itemName)
@@ -83,11 +76,9 @@ function findMatchingProduct(itemName, candidates) {
   for (const candidate of candidates) {
     const candWeight = extractWeight(candidate.name)
 
-    // Both have a detectable weight and they disagree -> definitely
-    // different products (different pack sizes). Skip.
+
     if (itemWeight && candWeight && itemWeight !== candWeight) continue
-    // One has a detectable weight and the other doesn't -> too uncertain
-    // to merge safely. Skip.
+
     if (Boolean(itemWeight) !== Boolean(candWeight)) continue
 
     const score = jaccardSimilarity(itemTokens, significantTokens(candidate.name))
