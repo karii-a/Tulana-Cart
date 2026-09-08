@@ -23,7 +23,10 @@ async function notifyPriceDrop({ productId, productName, storeName, oldPrice, ne
     product_id: productId,
   }))
 
-  await supabase.from('notifications').insert(rows)
+  const { error: insertError } = await supabase.from('notifications').insert(rows)
+  if (insertError) {
+    console.error('[notify] notifications insert failed:', insertError)
+  }
 
   for (const w of watchers) {
     const email = await getUserEmail(w.user_id)
@@ -51,13 +54,16 @@ async function notifyOrderStatus({ orderId, userId, status }) {
   const title = `Order #${orderId} update`
   const message = `Your order #${orderId} is now "${status}".`
 
-  await supabase.from('notifications').insert([{
+  const { error: insertError } = await supabase.from('notifications').insert([{
     user_id: userId,
     type: 'order_status',
     title,
     message,
     order_id: orderId,
   }])
+  if (insertError) {
+    console.error('[notify] notifications insert failed:', insertError)
+  }
 
   const email = await getUserEmail(userId)
   if (email) {
@@ -79,12 +85,15 @@ async function notifyPurchase({ userId, productName, amount }) {
   const title = `Marked as bought: ${productName}`
   const message = `You marked "${productName}" as bought for Rs. ${amount}. It's now in your Spending history.`
 
-  await supabase.from('notifications').insert([{
+  const { error: insertError } = await supabase.from('notifications').insert([{
     user_id: userId,
     type: 'purchase',
     title,
     message,
   }])
+  if (insertError) {
+    console.error('[notify] notifications insert failed:', insertError)
+  }
 
   const email = await getUserEmail(userId)
   if (email) {
@@ -107,12 +116,15 @@ async function notifySubscriptionSelected({ userId, tierName, amount }) {
   const title = `${tierName} plan selected`
   const message = `You selected the ${tierName} plan (Rs. ${amount}/month). Complete payment via eSewa to activate it — if you haven't finished checkout yet, this plan isn't active.`
 
-  await supabase.from('notifications').insert([{
+  const { error: insertError } = await supabase.from('notifications').insert([{
     user_id: userId,
     type: 'subscription_selected',
     title,
     message,
   }])
+  if (insertError) {
+    console.error('[notify] notifications insert failed:', insertError)
+  }
 
   const email = await getUserEmail(userId)
   if (email) {
