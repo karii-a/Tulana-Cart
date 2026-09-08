@@ -42,7 +42,8 @@ router.get('/sync-products', async (req, res) => {
         .from('products')
         .insert([{
           name: item.name,
-          name_np: item.name,
+          // Left null on purpose — see scrapers/runSync.js for why.
+          name_np: null,
           brand: item.name.trim().split(/\s+/)[0],
           category_id: categoryId
         }])

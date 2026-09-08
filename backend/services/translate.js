@@ -56,21 +56,30 @@ function restore(text, found) {
   )
 }
 
-async function translateProductName(name) {
-  const { protectedText, found } = protect(name)
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms))
+}
 
+// Minimum gap between outgoing translation calls when translating many
+// rows in a row (see scrapers/backfillTranslations.js). This is what
+// actually prevents the 429s — MyMemory's daily-word quota resets once a
+// day, but its per-second burst limit is much stricter, and a page with
+// hundreds of products hitting it all at once will get throttled long
+// before the daily quota is even relevant.
+const DELAY_BETWEEN_CALLS_MS = 400
+
+async function translateWithMyMemory(text) {
   const params = new URLSearchParams({
-    q: protectedText,
+    q: text,
     langpair: 'en|ne', // English -> Nepali
   })
 
-  // Optional: if you ever hit the free-tier limit, adding a contact email
-  // (de=you@example.com) as a query param raises the daily cap from
-  // ~5,000 to ~50,000 words/day, still free, no card. Uncomment and set
-  // MYMEMORY_CONTACT_EMAIL in Render's env vars if that's ever needed:
-  // if (process.env.MYMEMORY_CONTACT_EMAIL) {
-  //   params.set('de', process.env.MYMEMORY_CONTACT_EMAIL)
-  // }
+  // Adding a contact email (de=you@example.com) as a query param raises
+  // the daily cap from ~5,000 to ~50,000 words/day, still free, no card.
+  // Set MYMEMORY_CONTACT_EMAIL in Render's env vars.
+  if (process.env.MYMEMORY_CONTACT_EMAIL) {
+    params.set('de', process.env.MYMEMORY_CONTACT_EMAIL)
+  }
 
   const res = await fetch(
     `https://api.mymemory.translated.net/get?${params.toString()}`
@@ -78,22 +87,56 @@ async function translateProductName(name) {
 
   if (!res.ok) {
     const body = await res.text()
-    throw new Error(`Translation API error (${res.status}): ${body}`)
+    throw new Error(`MyMemory error (${res.status}): ${body}`)
   }
 
   const data = await res.json()
   const translatedRaw = data?.responseData?.translatedText
 
   if (!translatedRaw || data?.responseStatus !== 200) {
-    throw new Error(
-      `Translation API returned no usable result: ${JSON.stringify(data)}`
-    )
+    throw new Error(`MyMemory returned no usable result: ${JSON.stringify(data)}`)
   }
 
+  return translatedRaw
+}
 
+// Fallback used only when MyMemory itself errors or is rate-limited.
+// This is the free, unauthenticated endpoint Google's own Translate
+// website calls — no key, no signup, no small daily-word cap. It's
+// unofficial (Google could change it without notice), which is exactly
+// why it's the fallback and not the primary: MyMemory's behavior is
+// documented and stable, this one isn't.
+async function translateWithGoogle(text) {
+  const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl=ne&dt=t&q=${encodeURIComponent(text)}`
+  const res = await fetch(url)
 
+  if (!res.ok) throw new Error(`Google fallback error (${res.status})`)
+
+  const data = await res.json()
+  const translated = data?.[0]?.map((chunk) => chunk[0]).join('')
+
+  if (!translated) throw new Error('Google fallback returned no usable result')
+
+  return translated
+}
+
+async function translateProductName(name) {
+  const { protectedText, found } = protect(name)
+
+  let translatedRaw
+  try {
+    translatedRaw = await translateWithMyMemory(protectedText)
+  } catch (myMemoryErr) {
+    try {
+      translatedRaw = await translateWithGoogle(protectedText)
+    } catch (googleErr) {
+      throw new Error(
+        `Both translators failed. MyMemory: ${myMemoryErr.message} | Google: ${googleErr.message}`
+      )
+    }
+  }
 
   return restore(translatedRaw, found)
 }
 
-module.exports = { translateProductName }
+module.exports = { translateProductName, sleep, DELAY_BETWEEN_CALLS_MS }

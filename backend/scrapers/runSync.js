@@ -3,6 +3,7 @@ const config = require('./config')
 const { scrapeStore } = require('./scraper')
 const { notifyPriceDrop } = require('../services/notify')
 const { findMatchingProduct } = require('./productMatcher')
+const { backfillTranslations } = require('./backfillTranslations')
 
 // Fallback used only when an item has no categoryName at all (e.g. a store
 // config entry with no `categories` array — see config.js).
@@ -143,6 +144,17 @@ async function runSync() {
     summary.stores[key] = result
   }
 
+  // Translate anything still missing a Nepali name — sequentially, with
+  // a delay between calls (see backfillTranslations.js). This runs once
+  // per night here rather than live on the page, which is what used to
+  // fire 300+ simultaneous translate requests every time anyone visited
+  // the site and instantly exhausted the daily quota.
+  try {
+    summary.translations = await backfillTranslations()
+  } catch (err) {
+    summary.translations = { translated: 0, errors: [err.message] }
+  }
+
   summary.finishedAt = new Date().toISOString()
   return summary
 }
@@ -160,12 +172,11 @@ async function upsertProduct(item, storeConfig, storeId, result, knownProducts) 
       .from('products')
       .insert([{
         name: item.name,
-        // Left null on purpose: the frontend translates this to Nepali
-        // the first time anyone views it with the language toggle set to
-        // Nepali (see routes/translate.js), then caches the result here.
-        // Duplicating the English name in here would make every scraped
-        // product look "already translated" and it would never get a
-        // real Nepali name.
+        // Left null on purpose: backfillTranslations.js picks up any
+        // product with a null name_np at the end of every sync and
+        // translates it server-side. Duplicating the English name in
+        // here would make every scraped product look "already
+        // translated" and it would never get a real Nepali name.
         name_np: null,
         brand: extractBrand(item.name),
         category_id: categoryId,

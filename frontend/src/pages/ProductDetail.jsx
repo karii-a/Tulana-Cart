@@ -4,7 +4,6 @@ import { supabase } from '../lib/supabase'
 import { useAuth } from '../context/AuthContext'
 import { useLang } from '../context/LangContext'
 import { useWishlist } from '../context/WishlistContext'
-import { requestProductTranslation, needsTranslation } from '../lib/translateProduct'
 
 function ProductDetail() {
   const { id } = useParams()
@@ -15,22 +14,17 @@ function ProductDetail() {
   const [product, setProduct] = useState(null)
   const [loading, setLoading] = useState(true)
   const [selectedPrice, setSelectedPrice] = useState(null)
-  const [nameNp, setNameNp] = useState(null)
   const wishlisted = isWishlisted(parseInt(id))
 
   useEffect(() => {
     fetchProduct()
   }, [id])
 
-  useEffect(() => {
-    if (product && lang === 'np' && needsTranslation({ ...product, name_np: nameNp })) {
-      requestProductTranslation(product, setNameNp)
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [product, lang])
-
   async function fetchProduct() {
     setLoading(true)
+    // name_np is translated once, server-side, during the nightly sync
+    // (see backend/scrapers/backfillTranslations.js) — no live translate
+    // call needed here anymore.
     const { data } = await supabase
       .from('products')
       .select(`
@@ -43,7 +37,6 @@ function ProductDetail() {
 
     if (data) {
       setProduct(data)
-      setNameNp(data.name_np)
       const sorted = [...(data.product_prices || [])].sort((a, b) => a.price - b.price)
       setSelectedPrice(sorted[0] || null)
     }
@@ -81,7 +74,7 @@ function ProductDetail() {
           <p className="product-detail__category">
             {lang === 'en' ? product.categories?.name : product.categories?.name_np}
           </p>
-          <h1>{lang === 'en' ? product.name : (nameNp || product.name)}</h1>
+          <h1>{lang === 'en' ? product.name : (product.name_np || product.name)}</h1>
           <p className="product-detail__brand">{lang === 'en' ? 'Brand' : 'ब्रान्ड'}: <strong>{product.brand}</strong></p>
 
           <div className="product-detail__price-range">
