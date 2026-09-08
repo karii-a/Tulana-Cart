@@ -29,30 +29,13 @@ async function findPendingProducts(limit) {
 }
 
 // Categories and stores are small, fixed-size tables (dozens of rows,
-// not thousands), so it's fine to just pull them all — unlike products
-// they were, until recently, sometimes inserted with name_np duplicating
-// the English name as a placeholder (see resolveCategoryId /
-// resolveStoreId in runSync.js, and the old routes/sync.js seeder).
-//
-// IMPORTANT: "pending" is null ONLY, same as products — never "name_np
-// still equals name". A proper noun or brand-like name (e.g. a store
-// called "Vhandar") can genuinely translate to itself; if we treated
-// that as "still needs translating" we'd re-translate the same row
-// every single run forever, which is exactly the loop that was
-// happening. resetLegacyPlaceholders below sweeps any OLD placeholder
-// rows back to null ONCE so they get picked up by the null check below,
-// translated, saved — even if the saved value happens to equal the
-// English name — and never touched again.
-async function resetLegacyPlaceholders(table) {
-  const { data, error } = await supabase.from(table).select('id, name, name_np')
-  if (error) throw new Error(`could not load ${table}: ${error.message}`)
-
-  const placeholders = (data || []).filter((row) => row.name_np === row.name)
-  for (const row of placeholders) {
-    await supabase.from(table).update({ name_np: null }).eq('id', row.id)
-  }
-}
-
+// not thousands). "Pending" is null ONLY — never "name_np still equals
+// name". A proper noun or brand-like name (e.g. a store called
+// "Vhandar", a category like "HoReCa") can genuinely translate to
+// itself; treating that as "still needs translating" would re-translate
+// the same row every run forever. (If you're upgrading from an older
+// version of this project that used the equals-name check, run
+// scripts/resetLegacyTranslationPlaceholders.js once first.)
 async function findPendingRows(table, limit) {
   const { data, error } = await supabase
     .from(table)
@@ -93,14 +76,6 @@ async function backfillTable(table, rows, summary) {
  */
 async function backfillTranslations() {
   const summary = { translated: 0, errors: [] }
-
-  // One-time sweep: any row still carrying the old "name_np duplicates
-  // name" placeholder gets reset to null so it's picked up by the
-  // null-only check below. Safe to run every time — once a table has no
-  // more placeholders left, this is just two cheap SELECTs that find
-  // nothing to reset.
-  await resetLegacyPlaceholders('categories')
-  await resetLegacyPlaceholders('stores')
 
   const [pendingCategories, pendingStores, pendingProducts] = await Promise.all([
     findPendingRows('categories', MAX_ROWS_PER_TABLE_PER_RUN),
