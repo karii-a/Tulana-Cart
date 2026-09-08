@@ -1,13 +1,34 @@
+import { useState, useEffect } from "react";
 import { useLang } from "../context/LangContext";
 import { useAuth } from "../context/AuthContext";
 import { useWishlist } from "../context/WishlistContext";
 import { useNavigate } from "react-router-dom";
+import { requestProductTranslation, needsTranslation } from "../lib/translateProduct";
 
 function ProductCard({ product }) {
   const { lang } = useLang();
   const { user } = useAuth();
   const { isWishlisted, toggleWishlist } = useWishlist();
   const navigate = useNavigate();
+
+  // Local copy of the Nepali name so it can be filled in without needing
+  // a full page refetch once the translation comes back.
+  const [nameNp, setNameNp] = useState(product.name_np);
+
+  useEffect(() => {
+    setNameNp(product.name_np);
+  }, [product.name_np]);
+
+  useEffect(() => {
+    if (lang === "np" && needsTranslation({ ...product, name_np: nameNp })) {
+      requestProductTranslation(product, setNameNp);
+    }
+    // Only re-run when the language is switched to Nepali or the product
+    // itself changes — not on every nameNp update, or this would loop.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [lang, product.id]);
+
+  const displayName = lang === "en" ? product.name : (nameNp || product.name);
 
   const prices = product.product_prices ?? [];
   const nums = prices.map((p) => p.price);
@@ -40,13 +61,13 @@ function ProductCard({ product }) {
         {product.image_url && (
           <img
             src={product.image_url}
-            alt={product.name}
+            alt={displayName}
             className="product-card__image"
             loading="lazy"
           />
         )}
 
-        <h3>{product.name}</h3>
+        <h3>{displayName}</h3>
 
         <p className="product-card__brand">
           {product.brand}

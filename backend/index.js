@@ -7,6 +7,7 @@ const syncRoutes = require('./routes/sync')
 const scrapeRoutes = require('./routes/scrape')
 const notificationRoutes = require('./routes/notifications')
 const subscriptionRoutes = require('./routes/subscription')
+const translateRoutes = require('./routes/translate')
 const { runSync } = require('./scrapers/runSync')
 
 const app = express()
@@ -21,6 +22,7 @@ app.use('/api', syncRoutes)
 app.use('/api', scrapeRoutes)
 app.use('/api', notificationRoutes)
 app.use('/api', subscriptionRoutes)
+app.use('/api', translateRoutes)
 
 const PORT = process.env.PORT || 3000
 app.listen(PORT, () => {

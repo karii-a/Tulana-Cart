@@ -160,7 +160,13 @@ async function upsertProduct(item, storeConfig, storeId, result, knownProducts) 
       .from('products')
       .insert([{
         name: item.name,
-        name_np: item.name,
+        // Left null on purpose: the frontend translates this to Nepali
+        // the first time anyone views it with the language toggle set to
+        // Nepali (see routes/translate.js), then caches the result here.
+        // Duplicating the English name in here would make every scraped
+        // product look "already translated" and it would never get a
+        // real Nepali name.
+        name_np: null,
         brand: extractBrand(item.name),
         category_id: categoryId,
         image_url: item.imageUrl,
