@@ -8,6 +8,16 @@ const { findMatchingProduct } = require('./productMatcher')
 // config entry with no `categories` array — see config.js).
 const DEFAULT_CATEGORY_NAME = 'Uncategorized'
 
+// Brand was previously set to storeConfig.label, which is the STORE's name
+// (e.g. "Vhandar"), not the product's actual brand — that's why every card
+// showed the store name under the title instead of "Nebico", "Britannia",
+// etc. Every scraped product name starts with its brand (e.g. "Britannia
+// Marie Gold Biscuits"), so just take the first word.
+function extractBrand(name) {
+  if (!name) return null
+  return name.trim().split(/\s+/)[0]
+}
+
 // Cache store name -> id and category name -> id lookups for the duration
 // of one sync run
 const storeIdCache = {}
@@ -151,7 +161,7 @@ async function upsertProduct(item, storeConfig, storeId, result, knownProducts) 
       .insert([{
         name: item.name,
         name_np: item.name,
-        brand: storeConfig.label,
+        brand: extractBrand(item.name),
         category_id: categoryId,
         image_url: item.imageUrl,
       }])
@@ -168,8 +178,10 @@ async function upsertProduct(item, storeConfig, storeId, result, knownProducts) 
     // Existing product (e.g. from before this categorization fix was
     // deployed, or still on category_id 1) — bring its category up to date
     // too, so old rows self-heal on the next sync instead of staying
-    // miscategorized forever.
-    await supabase.from('products').update({ category_id: categoryId }).eq('id', productId)
+    // miscategorized forever. Same for brand: rows created before this fix
+    // still have the store name saved as their brand, so re-derive it here
+    // too.
+    await supabase.from('products').update({ category_id: categoryId, brand: extractBrand(item.name) }).eq('id', productId)
   }
 
   // Find the existing price row for this product+store to compare for a drop

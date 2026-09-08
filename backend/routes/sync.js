@@ -43,7 +43,7 @@ router.get('/sync-products', async (req, res) => {
         .insert([{
           name: item.name,
           name_np: item.name,
-          brand: 'Imported',
+          brand: item.name.trim().split(/\s+/)[0],
           category_id: categoryId
         }])
         .select()
