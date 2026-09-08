@@ -13,7 +13,7 @@ import SubscriptionSuccess from './pages/SubscriptionSuccess'
 import SubscriptionFailed from './pages/SubscriptionFailed'
 import Profile from './pages/Profile'
 import ProductDetail from './pages/ProductDetail'
-import OrderTracking from './pages/OrderTracking'
+
 import Analytics from './pages/Analytics'
 
 
@@ -36,7 +36,7 @@ function App() {
           <Route path="/subscription/failed" element={<SubscriptionFailed />} />
           <Route path="/profile" element={<Profile />} />
           <Route path="/analytics" element={<Analytics />} />
-          <Route path="/order/:id" element={<OrderTracking />} />
+        
           <Route path="/product/:id" element={<ProductDetail />} />
 
           <Route
